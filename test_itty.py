@@ -21,4 +21,12 @@ def ct(request):
 def test_get(request):
     return "'foo' is: %s" % request.GET.get('foo', 'not specified')
 
+@get('/simple_post')
+def simple_post(request):
+    return open('simple_post.html', 'r').read()
+
+@post('/test_post')
+def test_post(request):
+    return "'foo' is: %s" % request.POST.get('foo', 'not specified')
+
 run_itty()
