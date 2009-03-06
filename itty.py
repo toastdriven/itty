@@ -2,12 +2,11 @@
 The itty-bitty Python web framework.
 
 Totally ripping off Sintra, the Python way.
+A couple bits have been begged/borrowed/stolen from Django & various WSGI
+articles.
 """
 import re
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+
 
 __author__ = 'Daniel Lindsley'
 __version__ = ('0', '0', '3')
@@ -71,6 +70,7 @@ class NotFound(Exception):
 
 
 class Request(object):
+    """An object to wrap the environ bits in a friendlier way."""
     GET = {}
     POST = {}
     PUT = {}
@@ -103,6 +103,11 @@ class Request(object):
 
 
 def build_query_dict(query_string):
+    """
+    Takes GET/POST data and rips it apart into a dict.
+    
+    Expects a string of key/value pairs (i.e. foo=bar&moof=baz).
+    """
     pairs = query_string.split('&')
     query_dict = {}
     pair_re = re.compile('^(?P<key>[^=]*?)=(?P<value>.*)')
@@ -145,6 +150,7 @@ def handle_request(environ, start_response):
 
 
 def find_matching_url(request):
+    """Searches through the methods who've registed themselves with the HTTP decorators."""
     if not request.method in REQUEST_MAPPINGS:
         raise NotFound("The HTTP request method '%s' is not supported." % request.method)
     
@@ -158,6 +164,7 @@ def find_matching_url(request):
 
 
 def add_slash(url):
+    """Adds a trailing slash for consistency in urls."""
     if not url.endswith('/'):
         url = url + '/'
     return url
@@ -171,6 +178,7 @@ def not_found(environ, start_response):
 # Decorators
 
 def get(url):
+    """Registers a method as capable of processing GET requests."""
     def wrapped(method):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
@@ -182,6 +190,7 @@ def get(url):
 
 
 def post(url):
+    """Registers a method as capable of processing POST requests."""
     def wrapped(method):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
