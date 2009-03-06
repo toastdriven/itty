@@ -8,4 +8,8 @@ def index():
 def greeting():
     return 'Hello World!'
 
+@get('/hello/(?P<name>\w+)')
+def personal_greeting(name=', world'):
+    return 'Hello %s!' % name
+
 run_itty()
