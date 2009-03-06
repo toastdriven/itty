@@ -17,9 +17,19 @@ REQUEST_MAPPINGS = {
     'DELETE': [],
 }
 
+HTTP_MAPPINGS = {
+    200: '200 OK',
+    404: '404 NOT FOUND',
+}
+
 
 class NotFound(Exception):
     pass
+
+
+class Request(object):
+    def __init__(self, environ):
+        self._environ = environ
 
 
 def handle_request(environ, start_response):
@@ -29,9 +39,23 @@ def handle_request(environ, start_response):
     except NotFound:
         return not_found(environ, start_response)
     
-    # DRL_FIXME: Allow other statuses.
-    start_response('200 OK', [('Content-Type', 'text/html')])
-    return callback(**kwargs)
+    request = Request(environ)
+    output = callback(request, **kwargs)
+    ct = 'text/html'
+    status = 200
+    
+    try:
+        ct = callback.content_type
+    except AttributeError:
+        pass
+    
+    try:
+        status = callback.status
+    except AttributeError:
+        pass
+    
+    start_response(HTTP_MAPPINGS.get(status), [('Content-Type', ct)])
+    return output
 
 
 def find_matching_url(environ):
