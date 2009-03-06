@@ -18,8 +18,47 @@ REQUEST_MAPPINGS = {
 }
 
 HTTP_MAPPINGS = {
+    100: '100 CONTINUE',
+    101: '101 SWITCHING PROTOCOLS',
     200: '200 OK',
+    201: '201 CREATED',
+    202: '202 ACCEPTED',
+    203: '203 NON-AUTHORITATIVE INFORMATION',
+    204: '204 NO CONTENT',
+    205: '205 RESET CONTENT',
+    206: '206 PARTIAL CONTENT',
+    300: '300 MULTIPLE CHOICES',
+    301: '301 MOVED PERMANENTLY',
+    302: '302 FOUND',
+    303: '303 SEE OTHER',
+    304: '304 NOT MODIFIED',
+    305: '305 USE PROXY',
+    306: '306 RESERVED',
+    307: '307 TEMPORARY REDIRECT',
+    400: '400 BAD REQUEST',
+    401: '401 UNAUTHORIZED',
+    402: '402 PAYMENT REQUIRED',
+    403: '403 FORBIDDEN',
     404: '404 NOT FOUND',
+    405: '405 METHOD NOT ALLOWED',
+    406: '406 NOT ACCEPTABLE',
+    407: '407 PROXY AUTHENTICATION REQUIRED',
+    408: '408 REQUEST TIMEOUT',
+    409: '409 CONFLICT',
+    410: '410 GONE',
+    411: '411 LENGTH REQUIRED',
+    412: '412 PRECONDITION FAILED',
+    413: '413 REQUEST ENTITY TOO LARGE',
+    414: '414 REQUEST-URI TOO LONG',
+    415: '415 UNSUPPORTED MEDIA TYPE',
+    416: '416 REQUESTED RANGE NOT SATISFIABLE',
+    417: '417 EXPECTATION FAILED',
+    500: '500 INTERNAL SERVER ERROR',
+    501: '501 NOT IMPLEMENTED',
+    502: '502 BAD GATEWAY',
+    503: '503 SERVICE UNAVAILABLE',
+    504: '504 GATEWAY TIMEOUT',
+    505: '505 HTTP VERSION NOT SUPPORTED',
 }
 
 
@@ -28,18 +67,47 @@ class NotFound(Exception):
 
 
 class Request(object):
+    GET = {}
+    POST = {}
+    PUT = {}
+    DELETE = {}
+    
     def __init__(self, environ):
         self._environ = environ
+        self.setup_self()
+    
+    def setup_self(self):
+        self.path = add_slash(self._environ.get('PATH_INFO', ''))
+        self.method = self._environ.get('REQUEST_METHOD', 'GET')
+        self.query = self._environ.get('QUERY_STRING', '')
+        
+        self.GET = build_query_dict(self.query)
+
+
+def build_query_dict(query_string):
+    pairs = query_string.split('&')
+    query_dict = {}
+    pair_re = re.compile('^(?P<key>[^=]*?)=(?P<value>.*)')
+    
+    for pair in pairs:
+        match = pair_re.search(pair)
+        
+        if match is not None:
+            match_data = match.groupdict()
+            query_dict[match_data['key']] = match_data['value']
+    
+    return query_dict
 
 
 def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
+    request = Request(environ)
+    
     try:
-        (re_url, url, callback), kwargs = find_matching_url(environ)
+        (re_url, url, callback), kwargs = find_matching_url(request)
     except NotFound:
         return not_found(environ, start_response)
     
-    request = Request(environ)
     output = callback(request, **kwargs)
     ct = 'text/html'
     status = 200
@@ -58,16 +126,12 @@ def handle_request(environ, start_response):
     return output
 
 
-def find_matching_url(environ):
-    request_method = environ.get('REQUEST_METHOD', 'GET')
+def find_matching_url(request):
+    if not request.method in REQUEST_MAPPINGS:
+        raise NotFound("The HTTP request method '%s' is not supported." % request.method)
     
-    if not request_method in REQUEST_MAPPINGS:
-        raise NotFound("The HTTP request method '%s' is not supported." % request_method)
-    
-    path = add_slash(environ.get('PATH_INFO', ''))
-    
-    for url_set in REQUEST_MAPPINGS[request_method]:
-        match = url_set[0].search(path)
+    for url_set in REQUEST_MAPPINGS[request.method]:
+        match = url_set[0].search(request.path)
         
         if match is not None:
             return (url_set, match.groupdict())

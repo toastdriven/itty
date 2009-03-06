@@ -25,3 +25,5 @@ Example
       return 'Hello World!'
   
   run_itty()
+
+See ``test_itty.py`` for more usage.
