@@ -1,15 +1,38 @@
 """
 The itty-bitty Python web framework.
 
-Totally ripping off Sintra, the Python way.
-A couple bits have been begged/borrowed/stolen from Django & various WSGI
-articles.
+Totally ripping off Sintra, the Python way. Very useful for small applications,
+especially web services. Handles basic HTTP methods (PUT/DELETE too!). Errs on
+the side of fun and terse.
+
+
+Example Usage::
+
+    from itty import get, run_itty
+
+      @get('/')
+      def index():
+          return 'Hello World!'
+
+      run_itty()
+
+
+A couple of bits have been borrowed from other sources:
+
+* Django
+  * HTTP_MAPPINGS
+* Armin Ronacher's blog (http://lucumr.pocoo.org/2007/5/21/getting-started-with-wsgi)
+  * How to get started with WSGI
+
+
+Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
+at night. The joking around has become reality. :)
 """
 import re
 
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '0', '5')
+__version__ = ('0', '1', '1')
 __license__ = 'MIT'
 
 
@@ -68,6 +91,7 @@ HTTP_MAPPINGS = {
 
 
 class RequestError(Exception):
+    """A base exception for HTTP errors to inherit from."""
     status = 404
 
 class NotFound(RequestError):
@@ -75,6 +99,20 @@ class NotFound(RequestError):
 
 class AppError(RequestError):
     status = 500
+
+class Redirect(RequestError):
+    """
+    Redirects the user to a different URL.
+    
+    Slightly different than the other HTTP errors, the Redirect is less
+    'OMG Error Occurred' and more 'let's do something exceptional'. When you
+    redirect, you break out of normal processing anyhow, so it's a very similar
+    case."""
+    status = 302
+    url = ''
+    
+    def __init__(self, url):
+        self.url = url
 
 
 class Request(object):
@@ -162,6 +200,9 @@ def handle_request(environ, start_response):
 
 
 def handle_error(exception, environ, start_response):
+    """If an exception is thrown, deal with it and present an error page."""
+    environ['wsgi.errors'].write("Exception occurred on '%s': %s\n" % (environ['PATH_INFO'], exception[0]))
+    
     if isinstance(exception, RequestError):
         status = getattr(exception, 'status', 404)
     else:
@@ -260,14 +301,20 @@ def error(code):
 
 @error(404)
 def not_found(exception, environ, start_response):
-    start_response('404 NOT FOUND', [('Content-Type', 'text/plain')])
+    start_response(HTTP_MAPPINGS[404], [('Content-Type', 'text/plain')])
     return ['Not Found']
 
 
 @error(500)
 def app_error(exception, environ, start_response):
-    start_response('500 APPLICATION ERROR', [('Content-Type', 'text/plain')])
+    start_response(HTTP_MAPPINGS[500], [('Content-Type', 'text/plain')])
     return ['Application Error']
+
+
+@error(302)
+def redirect(exception, environ, start_response):
+    start_response(HTTP_MAPPINGS[302], [('Content-Type', 'text/plain'), ('Location', exception.url)])
+    return ['']
 
 
 # Sample server

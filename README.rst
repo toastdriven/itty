@@ -16,8 +16,10 @@ Currently supports:
 * URL Parameters
 * Basic GET/POST/PUT/DELETE support
 * User-definable error handlers
+* Redirect support
 
-This is not even alpha-quality stuff, so beware. It's also a lot of fun.
+Beware! If you're looking for a proven, enterprise-ready framework, you're in
+the wrong place. But it sure is a lot of fun.
 
 .. _Sinatra: http://sinatrarb.com/
 
@@ -36,3 +38,21 @@ Example
   run_itty()
 
 See ``test/test_itty.py`` for more usage.
+
+
+Other Sources
+=============
+
+A couple of bits have been borrowed from other sources:
+
+* Django
+  * HTTP_MAPPINGS
+* Armin Ronacher's blog (http://lucumr.pocoo.org/2007/5/21/getting-started-with-wsgi)
+  * How to get started with WSGI
+
+
+Thanks
+======
+
+Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
+at night. The joking around has become reality. :)

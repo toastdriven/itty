@@ -1,4 +1,4 @@
-from itty import error, get, post, put, delete, NotFound, AppError, run_itty
+from itty import error, get, post, put, delete, NotFound, AppError, Redirect, run_itty
 
 @error(500)
 def my_great_500(exception, env, start_response):
@@ -13,9 +13,11 @@ def my_great_500(exception, env, start_response):
             <h1>OH NOES!</h1>
             
             <p>Yep, you broke it.</p>
+            
+            <p>Exception: %s</p>
         </body>
     </html>
-    """
+    """ % exception.args
     return [html_output]
 
 @get('/')
@@ -64,5 +66,9 @@ def test_404(request):
 def test_500(request):
     raise RuntimeError('Oops.')
     return 'This should never happen either.'
+
+@get('/test_redirect')
+def test_redirect(request):
+    raise Redirect('/hello')
 
 run_itty()

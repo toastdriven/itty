@@ -2,6 +2,5 @@
 TODO
 ====
 
-* Unit Tests
-* Redirects
+* Unit Tests?
 * Mirror Rackup somehow?
