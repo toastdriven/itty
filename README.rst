@@ -46,8 +46,11 @@ Other Sources
 A couple of bits have been borrowed from other sources:
 
 * Django
+
   * HTTP_MAPPINGS
+
 * Armin Ronacher's blog (http://lucumr.pocoo.org/2007/5/21/getting-started-with-wsgi)
+
   * How to get started with WSGI
 
 
