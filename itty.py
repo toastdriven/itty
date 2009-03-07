@@ -74,7 +74,6 @@ class Request(object):
     GET = {}
     POST = {}
     PUT = {}
-    DELETE = {}
     
     def __init__(self, environ):
         self._environ = environ
@@ -96,10 +95,15 @@ class Request(object):
         if self._environ.get('CONTENT_TYPE', '').startswith('multipart'):
             raise Exception("Sorry, uploads are not supported.")
         
+        raw_data = ''
+        
+        if self.content_length != 0:
+            raw_data = self._environ['wsgi.input'].read(self.content_length)
+        
         if self.method == 'POST':
-            if self.content_length != 0:
-                post_data = self._environ['wsgi.input'].read(self.content_length)
-                self.POST = build_query_dict(post_data)
+            self.POST = build_query_dict(raw_data)
+        elif self.method == 'PUT':
+            self.PUT = build_query_dict(raw_data)
 
 
 def build_query_dict(query_string):
@@ -201,6 +205,31 @@ def post(url):
     return wrapped
 
 
+def put(url):
+    """Registers a method as capable of processing PUT requests."""
+    def wrapped(method):
+        def new(*args, **kwargs):
+            return method(*args, **kwargs)
+        # Register.
+        re_url = re.compile("^%s$" % add_slash(url))
+        REQUEST_MAPPINGS['PUT'].append((re_url, url, new))
+        new.status = 201
+        return new
+    return wrapped
+
+
+def delete(url):
+    """Registers a method as capable of processing DELETE requests."""
+    def wrapped(method):
+        def new(*args, **kwargs):
+            return method(*args, **kwargs)
+        # Register.
+        re_url = re.compile("^%s$" % add_slash(url))
+        REQUEST_MAPPINGS['DELETE'].append((re_url, url, new))
+        return new
+    return wrapped
+
+
 # Sample server
 
 def run_itty(host='localhost', port=8080):
@@ -213,6 +242,7 @@ def run_itty(host='localhost', port=8080):
     WSGI server implementations.
     """
     print 'itty starting up...'
+    print 'Listening on http://%s:%s...' % (host, port)
     print 'Use Ctrl-C to quit.'
     print
     

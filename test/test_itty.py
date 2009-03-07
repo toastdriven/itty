@@ -1,4 +1,4 @@
-from itty import get, post, run_itty
+from itty import get, post, put, delete, run_itty
 
 @get('/')
 def index(request):
@@ -28,5 +28,13 @@ def simple_post(request):
 @post('/test_post')
 def test_post(request):
     return "'foo' is: %s" % request.POST.get('foo', 'not specified')
+
+@put('/test_put')
+def test_put(request):
+    return "'foo' is: %s" % request.PUT.get('foo', 'not specified')
+
+@delete('/test_delete')
+def test_delete(request):
+    return 'Method received was %s.' % request.method
 
 run_itty()

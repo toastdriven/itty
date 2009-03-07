@@ -14,7 +14,7 @@ Currently supports:
 * Content-types
 * HTTP Status codes
 * URL Parameters
-* Basic GET/POST support
+* Basic GET/POST/PUT/DELETE support
 
 This is not even alpha-quality stuff, so beware. It's also a lot of fun.
 
