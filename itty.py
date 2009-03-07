@@ -9,7 +9,7 @@ import re
 
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '0', '3')
+__version__ = ('0', '0', '5')
 __license__ = 'MIT'
 
 
@@ -19,6 +19,8 @@ REQUEST_MAPPINGS = {
     'PUT': [],
     'DELETE': [],
 }
+
+ERROR_HANDLERS = {}
 
 HTTP_MAPPINGS = {
     100: '100 CONTINUE',
@@ -65,8 +67,14 @@ HTTP_MAPPINGS = {
 }
 
 
-class NotFound(Exception):
-    pass
+class RequestError(Exception):
+    status = 404
+
+class NotFound(RequestError):
+    status = 404
+
+class AppError(RequestError):
+    status = 500
 
 
 class Request(object):
@@ -132,10 +140,10 @@ def handle_request(environ, start_response):
     
     try:
         (re_url, url, callback), kwargs = find_matching_url(request)
-    except NotFound:
-        return not_found(environ, start_response)
+        output = callback(request, **kwargs)
+    except Exception, e:
+        return handle_error(e, environ, start_response)
     
-    output = callback(request, **kwargs)
     ct = 'text/html'
     status = 200
     
@@ -151,6 +159,18 @@ def handle_request(environ, start_response):
     
     start_response(HTTP_MAPPINGS.get(status), [('Content-Type', ct)])
     return output
+
+
+def handle_error(exception, environ, start_response):
+    if isinstance(exception, RequestError):
+        status = getattr(exception, 'status', 404)
+    else:
+        status = 500
+    
+    if status in ERROR_HANDLERS:
+        return ERROR_HANDLERS[status](exception, environ, start_response)
+    
+    return not_found(exception, environ, start_response)
 
 
 def find_matching_url(request):
@@ -172,11 +192,6 @@ def add_slash(url):
     if not url.endswith('/'):
         url = url + '/'
     return url
-
-
-def not_found(environ, start_response):
-    start_response('404 NOT FOUND', [('Content-Type', 'text/plain')])
-    return ['Not Found']
 
 
 # Decorators
@@ -228,6 +243,31 @@ def delete(url):
         REQUEST_MAPPINGS['DELETE'].append((re_url, url, new))
         return new
     return wrapped
+
+
+def error(code):
+    """Registers a method for processing errors of a certain HTTP code."""
+    def wrapped(method):
+        def new(*args, **kwargs):
+            return method(*args, **kwargs)
+        # Register.
+        ERROR_HANDLERS[code] = new
+        return new
+    return wrapped
+
+
+# Error handlers
+
+@error(404)
+def not_found(exception, environ, start_response):
+    start_response('404 NOT FOUND', [('Content-Type', 'text/plain')])
+    return ['Not Found']
+
+
+@error(500)
+def app_error(exception, environ, start_response):
+    start_response('500 APPLICATION ERROR', [('Content-Type', 'text/plain')])
+    return ['Application Error']
 
 
 # Sample server

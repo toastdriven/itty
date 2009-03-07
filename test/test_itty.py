@@ -1,4 +1,22 @@
-from itty import get, post, put, delete, run_itty
+from itty import error, get, post, put, delete, NotFound, AppError, run_itty
+
+@error(500)
+def my_great_500(exception, env, start_response):
+    start_response('500 APPLICATION ERROR', [('Content-Type', 'text/html')])
+    html_output = """
+    <html>
+        <head>
+            <title>Application Error! OH NOES!</title>
+        </head>
+        
+        <body>
+            <h1>OH NOES!</h1>
+            
+            <p>Yep, you broke it.</p>
+        </body>
+    </html>
+    """
+    return [html_output]
 
 @get('/')
 def index(request):
@@ -36,5 +54,15 @@ def test_put(request):
 @delete('/test_delete')
 def test_delete(request):
     return 'Method received was %s.' % request.method
+
+@get('/test_404')
+def test_404(request):
+    raise NotFound('Not here, sorry.')
+    return 'This should never happen.'
+
+@get('/test_500')
+def test_500(request):
+    raise RuntimeError('Oops.')
+    return 'This should never happen either.'
 
 run_itty()

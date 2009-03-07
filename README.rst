@@ -15,6 +15,7 @@ Currently supports:
 * HTTP Status codes
 * URL Parameters
 * Basic GET/POST/PUT/DELETE support
+* User-definable error handlers
 
 This is not even alpha-quality stuff, so beware. It's also a lot of fun.
 
