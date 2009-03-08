@@ -21,12 +21,14 @@ Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
 at night. The joking around has become reality. :)
 """
 import cgi
+import mimetypes
 import re
+import sys
 import urlparse
 
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '2', '1')
+__version__ = ('0', '3', '0')
 __license__ = 'MIT'
 
 
@@ -309,31 +311,82 @@ def redirect(exception, environ, start_response):
     return ['']
 
 
-# Sample server
+# Servers Adapters
 
-def run_itty(host='localhost', port=8080):
+def wsgiref_adapter(host, port):
+    from wsgiref.simple_server import make_server
+    srv = make_server(host, port, handle_request)
+    srv.serve_forever()
+
+
+def cherrypy_adapter(host, port):
+    # Experimental (Untested).
+    from cherrypy import wsgiserver
+    server = wsgiserver.CherryPyWSGIServer((host, port), handle_request)
+    server.start()
+
+
+def flup_adapter(host, port):
+    # Experimental (Untested).
+    from flup.server.fcgi import WSGIServer
+    WSGIServer(handle_request, bindAddress=(host, port)).run()
+
+
+def paste_adapter(host, port):
+    # Experimental (Untested).
+    from paste import httpserver
+    httpserver.serve(handle_request, host=host, port=str(port))
+
+
+def twisted_adapter(host, port):
+    # Experimental (Untested).
+    from twisted.application import service, strports
+    from twisted.web2 import server, channel, wsgi
+    
+    ittyResource = wsgi.WSGIResource(handle_request)
+    site = server.Site(ittyResource)
+    application = service.Application('web')
+    s = strports.service('tcp:%s' % post, channel.HTTPFactory(site))
+    s.setServiceParent(application)
+
+
+WSGI_ADAPTERS = {
+    'wsgiref': wsgiref_adapter,
+    'cherrypy': cherrypy_adapter,
+    'flup': flup_adapter,
+    'paste': paste_adapter,
+    'twisted': twisted_adapter,
+}
+
+# Server
+
+def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
     """
     Runs the itty web server.
     
-    Accepts an optional host (string) and port (integer) parameters.
+    Accepts an optional host (string), port (integer), server (string) and
+    config (python module name/path as a string) parameters.
     
-    Uses Python's built-in wsgiref implementation. Easily replaced with other
-    WSGI server implementations.
+    By default, uses Python's built-in wsgiref implementation. Specify a server
+    name from WSGI_ADAPTERS to use an alternate WSGI server.
     """
-    print 'itty starting up...'
+    if not server in WSGI_ADAPTERS:
+        raise RuntimeError("Server '%s' is not a valid server. Please choose a different server.")
+    
+    if config is not None:
+        # We'll let ImportErrors bubble up.
+        config_options = __import__(config)
+        host = getattr(config_options, 'host', host)
+        port = getattr(config_options, 'port', port)
+        server = getattr(config_options, 'server', server)
+    
+    print 'itty starting up (using %s)...' % server
     print 'Listening on http://%s:%s...' % (host, port)
     print 'Use Ctrl-C to quit.'
     print
     
     try:
-        from wsgiref.simple_server import make_server
-        srv = make_server(host, port, handle_request)
-        srv.serve_forever()
+        WSGI_ADAPTERS[server](host, port)
     except KeyboardInterrupt:
         print "Shuting down..."
-        import sys
         sys.exit()
-
-
-if __name__ == '__main__':
-    run_itty()
