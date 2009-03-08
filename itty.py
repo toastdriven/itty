@@ -17,17 +17,6 @@ Example Usage::
       run_itty()
 
 
-A couple of bits have been borrowed from other sources:
-
-* Django
-
-  * HTTP_MAPPINGS
-
-* Armin Ronacher's blog (http://lucumr.pocoo.org/2007/5/21/getting-started-with-wsgi)
-
-  * How to get started with WSGI
-
-
 Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
 at night. The joking around has become reality. :)
 """
@@ -37,7 +26,7 @@ import urlparse
 
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '2', '0')
+__version__ = ('0', '2', '1')
 __license__ = 'MIT'
 
 
@@ -194,20 +183,11 @@ def handle_request(environ, start_response):
     except Exception, e:
         return handle_error(e, environ, start_response)
     
-    ct = 'text/html'
-    status = 200
+    ct = getattr(callback, 'content_type', 'text/html')
+    status = getattr(callback, 'status', 200)
+    headers = getattr(callback, 'headers', [])
     
-    try:
-        ct = callback.content_type
-    except AttributeError:
-        pass
-    
-    try:
-        status = callback.status
-    except AttributeError:
-        pass
-    
-    start_response(HTTP_MAPPINGS.get(status), [('Content-Type', ct)])
+    start_response(HTTP_MAPPINGS.get(status), [('Content-Type', ct)] + headers)
     return output
 
 

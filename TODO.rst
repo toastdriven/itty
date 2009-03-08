@@ -2,4 +2,6 @@
 TODO
 ====
 
-* Static files?
+* Static files
+* Config File
+* Adapters for popular WSGI servers
