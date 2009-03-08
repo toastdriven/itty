@@ -31,11 +31,13 @@ A couple of bits have been borrowed from other sources:
 Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
 at night. The joking around has become reality. :)
 """
+import cgi
 import re
+import urlparse
 
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '1', '0')
+__version__ = ('0', '2', '0')
 __license__ = 'MIT'
 
 
@@ -139,40 +141,47 @@ class Request(object):
         except ValueError:
             pass
         
-        self.GET = build_query_dict(self.query)
-        
-        if self._environ.get('CONTENT_TYPE', '').startswith('multipart'):
-            raise Exception("Sorry, uploads are not supported.")
-        
-        raw_data = ''
-        
-        if self.content_length != 0:
-            raw_data = self._environ['wsgi.input'].read(self.content_length)
+        self.GET = self.build_get_dict()
         
         if self.method == 'POST':
-            self.POST = build_query_dict(raw_data)
+            self.POST = self.build_complex_dict()
         elif self.method == 'PUT':
-            self.PUT = build_query_dict(raw_data)
+            self.PUT = self.build_complex_dict()
 
 
-def build_query_dict(query_string):
-    """
-    Takes GET/POST data and rips it apart into a dict.
+    def build_get_dict(self):
+        """Takes GET data and rips it apart into a dict."""
+        raw_query_dict = urlparse.parse_qs(self._environ['QUERY_STRING'], keep_blank_values=1)
+        query_dict = {}
     
-    Expects a string of key/value pairs (i.e. foo=bar&moof=baz).
-    """
-    pairs = query_string.split('&')
-    query_dict = {}
-    pair_re = re.compile('^(?P<key>[^=]*?)=(?P<value>.*)')
+        for key, value in query_dict.items():
+            if len(value) <= 1:
+                query_dict[key] = value[0]
+            else:
+                # Since it's a list of multiple items, we must have seen more than
+                # one item of the same name come in. Store all of them.
+                query_dict[key] = value
     
-    for pair in pairs:
-        match = pair_re.search(pair)
+        return query_dict
+
+
+    def build_complex_dict(self):
+        """Takes POST/PUT data and rips it apart into a dict."""
+        raw_data = cgi.FieldStorage(fp=self._environ['wsgi.input'], environ=self._environ)
+        query_dict = {}
         
-        if match is not None:
-            match_data = match.groupdict()
-            query_dict[match_data['key']] = match_data['value']
-    
-    return query_dict
+        for field in raw_data:
+            if isinstance(raw_data[field], list):
+                # Since it's a list of multiple items, we must have seen more than
+                # one item of the same name come in. Store all of them.
+                query_dict[field] = [fs.value for fs in raw_data[field]]
+            elif raw_data[field].filename:
+                # We've got a file.
+                query_dict[field] = raw_data[field]
+            else:
+                query_dict[field] = raw_data[field].value
+        
+        return query_dict
 
 
 def handle_request(environ, start_response):

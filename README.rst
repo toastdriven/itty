@@ -17,6 +17,7 @@ Currently supports:
 * Basic GET/POST/PUT/DELETE support
 * User-definable error handlers
 * Redirect support
+* File uploads
 
 Beware! If you're looking for a proven, enterprise-ready framework, you're in
 the wrong place. But it sure is a lot of fun.

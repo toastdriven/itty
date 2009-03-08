@@ -2,5 +2,4 @@
 TODO
 ====
 
-* Unit Tests?
-* Mirror Rackup somehow?
+* Static files?

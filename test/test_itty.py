@@ -17,7 +17,7 @@ def my_great_500(exception, env, start_response):
             <p>Exception: %s</p>
         </body>
     </html>
-    """ % exception.args
+    """ % exception[0]
     return [html_output]
 
 @get('/')
@@ -43,11 +43,44 @@ def test_get(request):
 
 @get('/simple_post')
 def simple_post(request):
-    return open('simple_post.html', 'r').read()
+    return open('test/simple_post.html', 'r').read()
 
 @post('/test_post')
 def test_post(request):
     return "'foo' is: %s" % request.POST.get('foo', 'not specified')
+
+@get('/complex_post')
+def complex_post(request):
+    return open('test/complex_post.html', 'r').read()
+
+@post('/test_complex_post')
+def test_complex_post(request):
+    html = """
+    'foo' is: %s<br>
+    'bar' is: %s
+    """ % (request.POST.get('foo', 'not specified'), request.POST.get('bar', 'not specified'))
+    return html
+
+@get('/upload')
+def upload(request):
+    return open('test/upload.html', 'r').read()
+
+@post('/test_upload')
+def test_upload(request):
+    myfilename = ''
+    
+    if request.POST['myfile'].filename:
+        myfilename = request.POST['myfile'].filename
+        myfile_contents = request.POST['myfile'].file.read()
+        uploaded_file = open(myfilename, 'w')
+        uploaded_file.write(myfile_contents)
+        uploaded_file.close()
+    
+    html = """
+    'foo' is: %s<br>
+    'bar' is: %s
+    """ % (request.POST.get('foo', 'not specified'), myfilename)
+    return html
 
 @put('/test_put')
 def test_put(request):
