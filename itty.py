@@ -22,13 +22,14 @@ at night. The joking around has become reality. :)
 """
 import cgi
 import mimetypes
+import os
 import re
 import sys
 import urlparse
 
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '3', '0')
+__version__ = ('0', '3', '1')
 __license__ = 'MIT'
 
 
@@ -319,6 +320,12 @@ def wsgiref_adapter(host, port):
     srv.serve_forever()
 
 
+def appengine_adapter(host, port):
+    # Experimental (Untested).
+    from google.appengine.ext.webapp import util
+    util.run_wsgi_app(handle_request)
+
+
 def cherrypy_adapter(host, port):
     # Experimental (Untested).
     from cherrypy import wsgiserver
@@ -352,6 +359,7 @@ def twisted_adapter(host, port):
 
 WSGI_ADAPTERS = {
     'wsgiref': wsgiref_adapter,
+    'appengine': appengine_adapter,
     'cherrypy': cherrypy_adapter,
     'flup': flup_adapter,
     'paste': paste_adapter,
