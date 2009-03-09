@@ -11,7 +11,7 @@ Example Usage::
     from itty import get, run_itty
 
       @get('/')
-      def index():
+      def index(request):
           return 'Hello World!'
 
       run_itty()
@@ -26,7 +26,10 @@ import os
 import re
 import sys
 import urlparse
-
+try:
+    from urlparse import parse_qs
+except ImportError:
+    from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
 __version__ = ('0', '3', '1')
@@ -143,7 +146,8 @@ class Request(object):
 
     def build_get_dict(self):
         """Takes GET data and rips it apart into a dict."""
-        raw_query_dict = urlparse.parse_qs(self._environ['QUERY_STRING'], keep_blank_values=1)
+        try:
+            raw_query_dict = parse_qs(self._environ['QUERY_STRING'], keep_blank_values=1)
         query_dict = {}
     
         for key, value in query_dict.items():
