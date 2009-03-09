@@ -1,5 +1,0 @@
-====
-TODO
-====
-
-* Static files

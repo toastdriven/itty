@@ -19,6 +19,7 @@ Currently supports:
 * Redirect support
 * File uploads
 * Header support
+* Static media serving
 
 Beware! If you're looking for a proven, enterprise-ready framework, you're in
 the wrong place. But it sure is a lot of fun.

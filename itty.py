@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '3', '2')
+__version__ = ('0', '4', '0')
 __license__ = 'MIT'
 
 
@@ -44,7 +44,6 @@ REQUEST_MAPPINGS = {
 }
 
 ERROR_HANDLERS = {}
-MEDIA_ROOT = 'media'
 
 HTTP_MAPPINGS = {
     100: '100 CONTINUE',
@@ -119,6 +118,11 @@ class Redirect(RequestError):
         self.url = url
 
 
+class Media(object):
+    path = '/media'
+    root = os.path.join(os.path.dirname(__file__), 'media')
+
+
 class Request(object):
     """An object to wrap the environ bits in a friendlier way."""
     GET = {}
@@ -183,7 +187,7 @@ class Request(object):
         return query_dict
     
     def is_static(self):
-        return self.path.rstrip('/').startswith(MEDIA_ROOT):
+        return self.path.rstrip('/').startswith(Media.path)
 
 
 def handle_request(environ, start_response):
@@ -192,7 +196,7 @@ def handle_request(environ, start_response):
         request = Request(environ)
         
         if request.is_static():
-            return static_file(request)
+            return static_file(request, start_response)
         
         (re_url, url, callback), kwargs = find_matching_url(request)
         output = callback(request, **kwargs)
@@ -243,11 +247,6 @@ def add_slash(url):
     return url
 
 
-# DRL_FIXME: Do we really needs this?
-def set_media_root(path):
-    MEDIA_ROOT = path
-
-
 def check_url(url):
     """
     Ensures a URL can be registered.
@@ -255,8 +254,39 @@ def check_url(url):
     For now, this only ensures that it does not have the same path as the
     MEDIA_ROOT.
     """
-    if url.startswith(MEDIA_ROOT):
-        raise RuntimeError("Url '%s' can not have the same path as the MEDIA_ROOT." % url)
+    if url.startswith(Media.path):
+        raise RuntimeError("Url '%s' can not have the same path as the Media.path." % url)
+
+
+# Static file handler
+
+def static_file(request, start_response, media=Media):
+    # Strip the Media.path from beginning.
+    valid_path = request.path.replace(media.path, '', 1)
+    
+    # Strip the '/' from the beginning/end.
+    valid_path = valid_path.strip('/')
+    
+    # Kill off any character trying to work their way up the filesystem.
+    valid_path = valid_path.replace('//', '/').replace('/./', '/').replace('/../', '/')
+    
+    desired_path = os.path.join(media.root, valid_path)
+    
+    if not os.path.exists(desired_path):
+        raise NotFound("File does not exist.")
+    
+    if not os.access(desired_path, os.R_OK):
+        raise Forbidden("You do not have permission to access this file.")
+    
+    ct = 'text/plain'
+    ct_guess = mimetypes.guess_type(desired_path)
+    
+    if ct_guess[0] is not None:
+        ct = ct_guess[0]
+    
+    file_contents = open(desired_path, 'r').read()
+    start_response(HTTP_MAPPINGS[200], [('Content-Type', ct)])
+    return [file_contents]
 
 
 # Decorators
