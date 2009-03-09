@@ -44,6 +44,7 @@ REQUEST_MAPPINGS = {
 }
 
 ERROR_HANDLERS = {}
+MEDIA_ROOT = 'media'
 
 HTTP_MAPPINGS = {
     100: '100 CONTINUE',
@@ -180,13 +181,19 @@ class Request(object):
                 query_dict[field] = raw_data[field].value
         
         return query_dict
+    
+    def is_static(self):
+        return self.path.rstrip('/').startswith(MEDIA_ROOT):
 
 
 def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
-    request = Request(environ)
-    
     try:
+        request = Request(environ)
+        
+        if request.is_static():
+            return static_file(request)
+        
         (re_url, url, callback), kwargs = find_matching_url(request)
         output = callback(request, **kwargs)
     except Exception, e:
@@ -236,6 +243,22 @@ def add_slash(url):
     return url
 
 
+# DRL_FIXME: Do we really needs this?
+def set_media_root(path):
+    MEDIA_ROOT = path
+
+
+def check_url(url):
+    """
+    Ensures a URL can be registered.
+    
+    For now, this only ensures that it does not have the same path as the
+    MEDIA_ROOT.
+    """
+    if url.startswith(MEDIA_ROOT):
+        raise RuntimeError("Url '%s' can not have the same path as the MEDIA_ROOT." % url)
+
+
 # Decorators
 
 def get(url):
@@ -244,6 +267,7 @@ def get(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
+        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['GET'].append((re_url, url, new))
         return new
@@ -256,6 +280,7 @@ def post(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
+        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['POST'].append((re_url, url, new))
         return new
@@ -268,6 +293,7 @@ def put(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
+        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['PUT'].append((re_url, url, new))
         new.status = 201
@@ -281,6 +307,7 @@ def delete(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
+        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['DELETE'].append((re_url, url, new))
         return new
@@ -399,6 +426,7 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
         port = getattr(config_options, 'port', port)
         server = getattr(config_options, 'server', server)
     
+    # AppEngine seems to echo everything, even though it shouldn't. Accomodate.
     if server != 'appengine':
         print 'itty starting up (using %s)...' % server
         print 'Listening on http://%s:%s...' % (host, port)
