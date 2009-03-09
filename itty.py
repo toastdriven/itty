@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '4', '0')
+__version__ = ('0', '5', '0')
 __license__ = 'MIT'
 
 
@@ -44,6 +44,8 @@ REQUEST_MAPPINGS = {
 }
 
 ERROR_HANDLERS = {}
+
+MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 
 HTTP_MAPPINGS = {
     100: '100 CONTINUE',
@@ -116,11 +118,7 @@ class Redirect(RequestError):
     
     def __init__(self, url):
         self.url = url
-
-
-class Media(object):
-    path = '/media'
-    root = os.path.join(os.path.dirname(__file__), 'media')
+        self.args = ["Redirecting to '%s'..." % self.url]
 
 
 class Request(object):
@@ -129,8 +127,9 @@ class Request(object):
     POST = {}
     PUT = {}
     
-    def __init__(self, environ):
+    def __init__(self, environ, start_response):
         self._environ = environ
+        self._start_response = start_response
         self.setup_self()
     
     def setup_self(self):
@@ -185,23 +184,17 @@ class Request(object):
                 query_dict[field] = raw_data[field].value
         
         return query_dict
-    
-    def is_static(self):
-        return self.path.rstrip('/').startswith(Media.path)
 
 
 def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
     try:
-        request = Request(environ)
-        
-        if request.is_static():
-            return static_file(request, start_response)
+        request = Request(environ, start_response)
         
         (re_url, url, callback), kwargs = find_matching_url(request)
         output = callback(request, **kwargs)
     except Exception, e:
-        return handle_error(e, environ, start_response)
+        return handle_error(e, request)
     
     ct = getattr(callback, 'content_type', 'text/html')
     status = getattr(callback, 'status', 200)
@@ -211,9 +204,9 @@ def handle_request(environ, start_response):
     return output
 
 
-def handle_error(exception, environ, start_response):
+def handle_error(exception, request):
     """If an exception is thrown, deal with it and present an error page."""
-    environ['wsgi.errors'].write("Exception occurred on '%s': %s\n" % (environ['PATH_INFO'], exception[0]))
+    request._environ['wsgi.errors'].write("Exception occurred on '%s': %s\n" % (request._environ['PATH_INFO'], exception[0]))
     
     if isinstance(exception, RequestError):
         status = getattr(exception, 'status', 404)
@@ -221,9 +214,9 @@ def handle_error(exception, environ, start_response):
         status = 500
     
     if status in ERROR_HANDLERS:
-        return ERROR_HANDLERS[status](exception, environ, start_response)
+        return ERROR_HANDLERS[status](request, exception)
     
-    return not_found(exception, environ, start_response)
+    return not_found(request, exception)
 
 
 def find_matching_url(request):
@@ -247,30 +240,39 @@ def add_slash(url):
     return url
 
 
-def check_url(url):
+def content_type(filename):
     """
-    Ensures a URL can be registered.
+    Takes a guess at what the desired mime type might be for the requested file.
     
-    For now, this only ensures that it does not have the same path as the
-    MEDIA_ROOT.
+    Mostly only useful for static media files.
     """
-    if url.startswith(Media.path):
-        raise RuntimeError("Url '%s' can not have the same path as the Media.path." % url)
+    ct = 'text/plain'
+    ct_guess = mimetypes.guess_type(filename)
+
+    if ct_guess[0] is not None:
+        ct = ct_guess[0]
+    
+    return ct
 
 
 # Static file handler
 
-def static_file(request, start_response, media=Media):
-    # Strip the Media.path from beginning.
-    valid_path = request.path.replace(media.path, '', 1)
+def static_file(request, filename, root=MEDIA_ROOT):
+    """
+    Basic handler for serving up static media files.
+    
+    Accepts an optional root (filepath string, defaults to MEDIA_ROOT) parameter.
+    """
+    if filename is None:
+        raise Forbidden("You must specify a file you'd like to access.")
     
     # Strip the '/' from the beginning/end.
-    valid_path = valid_path.strip('/')
+    valid_path = filename.strip('/')
     
     # Kill off any character trying to work their way up the filesystem.
     valid_path = valid_path.replace('//', '/').replace('/./', '/').replace('/../', '/')
     
-    desired_path = os.path.join(media.root, valid_path)
+    desired_path = os.path.join(root, valid_path)
     
     if not os.path.exists(desired_path):
         raise NotFound("File does not exist.")
@@ -278,15 +280,7 @@ def static_file(request, start_response, media=Media):
     if not os.access(desired_path, os.R_OK):
         raise Forbidden("You do not have permission to access this file.")
     
-    ct = 'text/plain'
-    ct_guess = mimetypes.guess_type(desired_path)
-    
-    if ct_guess[0] is not None:
-        ct = ct_guess[0]
-    
-    file_contents = open(desired_path, 'r').read()
-    start_response(HTTP_MAPPINGS[200], [('Content-Type', ct)])
-    return [file_contents]
+    return open(desired_path, 'r').read()
 
 
 # Decorators
@@ -297,7 +291,6 @@ def get(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['GET'].append((re_url, url, new))
         return new
@@ -310,7 +303,6 @@ def post(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['POST'].append((re_url, url, new))
         return new
@@ -323,7 +315,6 @@ def put(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['PUT'].append((re_url, url, new))
         new.status = 201
@@ -337,7 +328,6 @@ def delete(url):
         def new(*args, **kwargs):
             return method(*args, **kwargs)
         # Register.
-        check_url(url)
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['DELETE'].append((re_url, url, new))
         return new
@@ -358,26 +348,26 @@ def error(code):
 # Error handlers
 
 @error(403)
-def forbidden(exception, environ, start_response):
-    start_response(HTTP_MAPPINGS[403], [('Content-Type', 'text/plain')])
+def forbidden(request, exception):
+    request._start_response(HTTP_MAPPINGS[403], [('Content-Type', 'text/plain')])
     return ['Forbidden']
 
 
 @error(404)
-def not_found(exception, environ, start_response):
-    start_response(HTTP_MAPPINGS[404], [('Content-Type', 'text/plain')])
+def not_found(request, exception):
+    request._start_response(HTTP_MAPPINGS[404], [('Content-Type', 'text/plain')])
     return ['Not Found']
 
 
 @error(500)
-def app_error(exception, environ, start_response):
-    start_response(HTTP_MAPPINGS[500], [('Content-Type', 'text/plain')])
+def app_error(request, exception):
+    request._start_response(HTTP_MAPPINGS[500], [('Content-Type', 'text/plain')])
     return ['Application Error']
 
 
 @error(302)
-def redirect(exception, environ, start_response):
-    start_response(HTTP_MAPPINGS[302], [('Content-Type', 'text/plain'), ('Location', exception.url)])
+def redirect(request, exception):
+    request._start_response(HTTP_MAPPINGS[302], [('Content-Type', 'text/plain'), ('Location', exception.url)])
     return ['']
 
 

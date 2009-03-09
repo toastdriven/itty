@@ -40,7 +40,7 @@ Example
   
   run_itty()
 
-See ``test/test_itty.py`` for more usage.
+See ``examples/`` for more usages.
 
 
 Other Sources
