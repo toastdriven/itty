@@ -94,6 +94,9 @@ class RequestError(Exception):
     """A base exception for HTTP errors to inherit from."""
     status = 404
 
+class Forbidden(RequestError):
+    status = 403
+
 class NotFound(RequestError):
     status = 404
 
@@ -297,6 +300,12 @@ def error(code):
 
 
 # Error handlers
+
+@error(403)
+def forbidden(exception, environ, start_response):
+    start_response(HTTP_MAPPINGS[403], [('Content-Type', 'text/plain')])
+    return ['Forbidden']
+
 
 @error(404)
 def not_found(exception, environ, start_response):
