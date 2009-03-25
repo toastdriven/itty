@@ -404,15 +404,19 @@ def paste_adapter(host, port):
 
 
 def twisted_adapter(host, port):
-    # Experimental (Untested).
     from twisted.application import service, strports
-    from twisted.web2 import server, channel, wsgi
+    from twisted.web import server, http, wsgi
+    from twisted.python.threadpool import ThreadPool
+    from twisted.internet import reactor
     
-    ittyResource = wsgi.WSGIResource(handle_request)
+    thread_pool = ThreadPool()
+    thread_pool.start()
+    reactor.addSystemEventTrigger('after', 'shutdown', thread_pool.stop)
+    
+    ittyResource = wsgi.WSGIResource(reactor, thread_pool, handle_request)
     site = server.Site(ittyResource)
-    application = service.Application('web')
-    s = strports.service('tcp:%s' % post, channel.HTTPFactory(site))
-    s.setServiceParent(application)
+    reactor.listenTCP(port, site)
+    reactor.run()
 
 
 WSGI_ADAPTERS = {
