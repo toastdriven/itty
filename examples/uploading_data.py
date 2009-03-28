@@ -2,7 +2,7 @@ from itty import *
 
 @get('/upload')
 def upload(request):
-    return open('example/html/upload.html', 'r').read()
+    return open('examples/html/upload.html', 'r').read()
 
 @post('/test_upload')
 def test_upload(request):
