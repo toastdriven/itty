@@ -206,7 +206,7 @@ def handle_request(environ, start_response):
 
 def handle_error(exception, request):
     """If an exception is thrown, deal with it and present an error page."""
-    request._environ['wsgi.errors'].write("Exception occurred on '%s': %s\n" % (request._environ['PATH_INFO'], exception[0]))
+    request._environ['wsgi.errors'].write("Exception occurred on '%s': %s\n" % (request._environ['PATH_INFO'], exception))
     
     if isinstance(exception, RequestError):
         status = getattr(exception, 'status', 404)

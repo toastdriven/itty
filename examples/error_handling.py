@@ -17,7 +17,7 @@ def my_great_500(request, exception):
             <p>Exception: %s</p>
         </body>
     </html>
-    """ % exception[0]
+    """ % exception
     return [html_output]
 
 @get('/hello')
