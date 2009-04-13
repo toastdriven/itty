@@ -2,7 +2,7 @@ from itty import *
 
 @get('/simple_post')
 def simple_post(request):
-    return open('example/html/simple_post.html', 'r').read()
+    return open('examples/html/simple_post.html', 'r').read()
 
 @post('/test_post')
 def test_post(request):
@@ -10,7 +10,7 @@ def test_post(request):
 
 @get('/complex_post')
 def complex_post(request):
-    return open('example/html/complex_post.html', 'r').read()
+    return open('examples/html/complex_post.html', 'r').read()
 
 @post('/test_complex_post')
 def test_complex_post(request):
