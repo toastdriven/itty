@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '5', '0')
+__version__ = ('0', '5', '1')
 __license__ = 'MIT'
 
 
@@ -156,7 +156,7 @@ class Request(object):
         raw_query_dict = parse_qs(self._environ['QUERY_STRING'], keep_blank_values=1)
         query_dict = {}
     
-        for key, value in query_dict.items():
+        for key, value in raw_query_dict.items():
             if len(value) <= 1:
                 query_dict[key] = value[0]
             else:
