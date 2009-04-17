@@ -3,7 +3,7 @@
 from distutils.core import setup
 from itty import __version__
 
-classifiers = ['License :: OSI Approved :: MIT License']
+classifiers = ['License :: OSI Approved :: BSD License']
 setup(name='itty',
       version='%s.%s.%s' % __version__,
       description='The itty-bitty Python web framework.',
@@ -12,6 +12,6 @@ setup(name='itty',
       author_email='daniel@toastdriven.com',
       url='http://github.com/toastdriven/itty/',
       py_modules=['itty'],
-      license='MIT',
+      license='BSD',
       classifiers=classifiers,
      )

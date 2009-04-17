@@ -33,7 +33,7 @@ except ImportError:
 
 __author__ = 'Daniel Lindsley'
 __version__ = ('0', '5', '1')
-__license__ = 'MIT'
+__license__ = 'BSD'
 
 
 REQUEST_MAPPINGS = {
