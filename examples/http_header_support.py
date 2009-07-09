@@ -2,19 +2,24 @@ from itty import *
 
 @get('/ct')
 def ct(request):
-    ct.content_type = 'text/plain'
-    return 'Check your Content-Type headers.'
+    response = Response('Check your Content-Type headers.', content_type='text/plain')
+    return response
 
 @get('/headers')
 def test_headers(request):
-    test_headers.headers = [
+    headers = [
         ('X-Powered-By', 'itty'),
         ('Set-Cookie', 'username=daniel')
     ]
-    return 'Check your headers.'
+    response = Response('Check your headers.', headers=headers)
+    return response
+
+@get('/redirected')
+def index(request):
+    return 'You got redirected!'
 
 @get('/test_redirect')
 def test_redirect(request):
-    raise Redirect('/hello')
+    raise Redirect('/redirected')
 
 run_itty()

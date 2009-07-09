@@ -24,7 +24,6 @@ import cgi
 import mimetypes
 import os
 import re
-import sys
 import urlparse
 try:
     from urlparse import parse_qs
@@ -32,7 +31,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '5', '1')
+__version__ = ('0', '6', '0')
 __license__ = 'BSD'
 
 
@@ -48,47 +47,47 @@ ERROR_HANDLERS = {}
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 
 HTTP_MAPPINGS = {
-    100: '100 CONTINUE',
-    101: '101 SWITCHING PROTOCOLS',
-    200: '200 OK',
-    201: '201 CREATED',
-    202: '202 ACCEPTED',
-    203: '203 NON-AUTHORITATIVE INFORMATION',
-    204: '204 NO CONTENT',
-    205: '205 RESET CONTENT',
-    206: '206 PARTIAL CONTENT',
-    300: '300 MULTIPLE CHOICES',
-    301: '301 MOVED PERMANENTLY',
-    302: '302 FOUND',
-    303: '303 SEE OTHER',
-    304: '304 NOT MODIFIED',
-    305: '305 USE PROXY',
-    306: '306 RESERVED',
-    307: '307 TEMPORARY REDIRECT',
-    400: '400 BAD REQUEST',
-    401: '401 UNAUTHORIZED',
-    402: '402 PAYMENT REQUIRED',
-    403: '403 FORBIDDEN',
-    404: '404 NOT FOUND',
-    405: '405 METHOD NOT ALLOWED',
-    406: '406 NOT ACCEPTABLE',
-    407: '407 PROXY AUTHENTICATION REQUIRED',
-    408: '408 REQUEST TIMEOUT',
-    409: '409 CONFLICT',
-    410: '410 GONE',
-    411: '411 LENGTH REQUIRED',
-    412: '412 PRECONDITION FAILED',
-    413: '413 REQUEST ENTITY TOO LARGE',
-    414: '414 REQUEST-URI TOO LONG',
-    415: '415 UNSUPPORTED MEDIA TYPE',
-    416: '416 REQUESTED RANGE NOT SATISFIABLE',
-    417: '417 EXPECTATION FAILED',
-    500: '500 INTERNAL SERVER ERROR',
-    501: '501 NOT IMPLEMENTED',
-    502: '502 BAD GATEWAY',
-    503: '503 SERVICE UNAVAILABLE',
-    504: '504 GATEWAY TIMEOUT',
-    505: '505 HTTP VERSION NOT SUPPORTED',
+    100: 'CONTINUE',
+    101: 'SWITCHING PROTOCOLS',
+    200: 'OK',
+    201: 'CREATED',
+    202: 'ACCEPTED',
+    203: 'NON-AUTHORITATIVE INFORMATION',
+    204: 'NO CONTENT',
+    205: 'RESET CONTENT',
+    206: 'PARTIAL CONTENT',
+    300: 'MULTIPLE CHOICES',
+    301: 'MOVED PERMANENTLY',
+    302: 'FOUND',
+    303: 'SEE OTHER',
+    304: 'NOT MODIFIED',
+    305: 'USE PROXY',
+    306: 'RESERVED',
+    307: 'TEMPORARY REDIRECT',
+    400: 'BAD REQUEST',
+    401: 'UNAUTHORIZED',
+    402: 'PAYMENT REQUIRED',
+    403: 'FORBIDDEN',
+    404: 'NOT FOUND',
+    405: 'METHOD NOT ALLOWED',
+    406: 'NOT ACCEPTABLE',
+    407: 'PROXY AUTHENTICATION REQUIRED',
+    408: 'REQUEST TIMEOUT',
+    409: 'CONFLICT',
+    410: 'GONE',
+    411: 'LENGTH REQUIRED',
+    412: 'PRECONDITION FAILED',
+    413: 'REQUEST ENTITY TOO LARGE',
+    414: 'REQUEST-URI TOO LONG',
+    415: 'UNSUPPORTED MEDIA TYPE',
+    416: 'REQUESTED RANGE NOT SATISFIABLE',
+    417: 'EXPECTATION FAILED',
+    500: 'INTERNAL SERVER ERROR',
+    501: 'NOT IMPLEMENTED',
+    502: 'BAD GATEWAY',
+    503: 'SERVICE UNAVAILABLE',
+    504: 'GATEWAY TIMEOUT',
+    505: 'HTTP VERSION NOT SUPPORTED',
 }
 
 
@@ -186,22 +185,42 @@ class Request(object):
         return query_dict
 
 
+class Response(object):
+    headers = []
+    
+    def __init__(self, output, headers=None, status=200, content_type='text/html'):
+        self.output = output
+        self.content_type = content_type
+        self.status = status
+        self.headers = []
+        
+        if headers and isinstance(headers, list):
+            self.headers = headers
+    
+    def add_header(self, key, value):
+        self.headers.append((key, value))
+    
+    def send(self, start_response):
+        status = "%d %s" % (self.status, HTTP_MAPPINGS.get(self.status))
+        headers = [('Content-Type', self.content_type)] + self.headers
+        start_response(status, headers)
+        return self.output
+
+
 def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
     try:
         request = Request(environ, start_response)
         
         (re_url, url, callback), kwargs = find_matching_url(request)
-        output = callback(request, **kwargs)
+        response = callback(request, **kwargs)
     except Exception, e:
         return handle_error(e, request)
     
-    ct = getattr(callback, 'content_type', 'text/html')
-    status = getattr(callback, 'status', 200)
-    headers = getattr(callback, 'headers', [])
+    if not isinstance(response, Response):
+        response = Response(response)
     
-    start_response(HTTP_MAPPINGS.get(status), [('Content-Type', ct)] + headers)
-    return output
+    return response.send(start_response)
 
 
 def handle_error(exception, request):
@@ -349,26 +368,26 @@ def error(code):
 
 @error(403)
 def forbidden(request, exception):
-    request._start_response(HTTP_MAPPINGS[403], [('Content-Type', 'text/plain')])
-    return ['Forbidden']
+    response = Response('Forbidden', status=403, content_type='text/plain')
+    return response.send(request._start_response)
 
 
 @error(404)
 def not_found(request, exception):
-    request._start_response(HTTP_MAPPINGS[404], [('Content-Type', 'text/plain')])
-    return ['Not Found']
+    response = Response('Not Found', status=404, content_type='text/plain')
+    return response.send(request._start_response)
 
 
 @error(500)
 def app_error(request, exception):
-    request._start_response(HTTP_MAPPINGS[500], [('Content-Type', 'text/plain')])
-    return ['Application Error']
+    response = Response('Application Error', status=500, content_type='text/plain')
+    return response.send(request._start_response)
 
 
 @error(302)
 def redirect(request, exception):
-    request._start_response(HTTP_MAPPINGS[302], [('Content-Type', 'text/plain'), ('Location', exception.url)])
-    return ['']
+    response = Response('', status=302, content_type='text/plain', headers=[('Location', exception.url)])
+    return response.send(request._start_response)
 
 
 # Servers Adapters
@@ -404,8 +423,7 @@ def paste_adapter(host, port):
 
 
 def twisted_adapter(host, port):
-    from twisted.application import service, strports
-    from twisted.web import server, http, wsgi
+    from twisted.web import server, wsgi
     from twisted.python.threadpool import ThreadPool
     from twisted.internet import reactor
     
@@ -457,10 +475,4 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
         print 'Use Ctrl-C to quit.'
         print
     
-    try:
-        WSGI_ADAPTERS[server](host, port)
-    except KeyboardInterrupt:
-        if server != 'appengine':
-            print "Shuting down..."
-        
-        sys.exit()
+    WSGI_ADAPTERS[server](host, port)

@@ -2,7 +2,6 @@ from itty import *
 
 @error(500)
 def my_great_500(request, exception):
-    request._start_response('500 APPLICATION ERROR', [('Content-Type', 'text/html')])
     html_output = """
     <html>
         <head>
@@ -18,7 +17,8 @@ def my_great_500(request, exception):
         </body>
     </html>
     """ % exception
-    return [html_output]
+    response = Response(html_output, status=500)
+    return response.send(request._start_response)
 
 @get('/hello')
 def hello(request):
