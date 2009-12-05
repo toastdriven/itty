@@ -1,1 +1,5 @@
 build/
+*.pyc
+.DS_Store
+MANIFEST
+dist/
