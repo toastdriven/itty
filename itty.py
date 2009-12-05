@@ -31,7 +31,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '1')
+__version__ = ('0', '6', '2', 'beta')
 __license__ = 'BSD'
 
 
@@ -459,7 +459,7 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
     name from WSGI_ADAPTERS to use an alternate WSGI server.
     """
     if not server in WSGI_ADAPTERS:
-        raise RuntimeError("Server '%s' is not a valid server. Please choose a different server.")
+        raise RuntimeError("Server '%s' is not a valid server. Please choose a different server." % server)
     
     if config is not None:
         # We'll let ImportErrors bubble up.
