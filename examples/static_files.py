@@ -11,8 +11,8 @@ def index(request):
 # file.
 @get('/media/(?P<filename>.+)')
 def my_media(request, filename):
-    my_media.content_type = content_type(filename)
     my_root = os.path.join(os.path.dirname(__file__), 'media')
-    return static_file(request, filename=filename, root=my_root)
+    output = static_file(request, filename=filename, root=my_root)
+    return Response(output, content_type=content_type(filename))
 
 run_itty()

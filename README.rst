@@ -4,7 +4,7 @@ itty.py
 
 The itty-bitty Python web framework.
 
-``itty.py`` is a little experiment, an attempt at a Sinatra_ influenced 
+``itty.py`` is a little experiment, an attempt at a Sinatra_ influenced
 micro-framework that does just enough to be useful and nothing more.
 
 Currently supports:

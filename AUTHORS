@@ -9,3 +9,4 @@ Contributors:
     * Christian Metts for various patches and suggestions
     * marly for a patch to an exception's message
     * tstromberg for a patch related to printing tracebacks on errors
+    * mronge for a patch to the static files example
