@@ -484,4 +484,7 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
         print 'Use Ctrl-C to quit.'
         print
     
-    WSGI_ADAPTERS[server](host, port)
+    try:
+        WSGI_ADAPTERS[server](host, port)
+    except KeyboardInterrupt:
+        print 'Shutting down. Have a nice day!'
