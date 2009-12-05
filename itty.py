@@ -24,6 +24,8 @@ import cgi
 import mimetypes
 import os
 import re
+import sys
+import traceback
 import urlparse
 try:
     from urlparse import parse_qs
@@ -225,7 +227,14 @@ def handle_request(environ, start_response):
 
 def handle_error(exception, request):
     """If an exception is thrown, deal with it and present an error page."""
-    request._environ['wsgi.errors'].write("Exception occurred on '%s': %s\n" % (request._environ['PATH_INFO'], exception))
+    (e_type, e_value, e_tb) = sys.exc_info()
+    message = "%s occurred on '%s': %s\nTraceback: %s" % (
+        exception.__class__,
+        request._environ['PATH_INFO'],
+        exception,
+        ''.join(traceback.format_exception(e_type, e_value, e_tb))
+    )
+    request._environ['wsgi.errors'].write(message)
     
     if isinstance(exception, RequestError):
         status = getattr(exception, 'status', 404)
