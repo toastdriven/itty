@@ -26,7 +26,6 @@ import os
 import re
 import sys
 import traceback
-import urlparse
 try:
     from urlparse import parse_qs
 except ImportError:
@@ -276,20 +275,17 @@ def content_type(filename):
     """
     ct = 'text/plain'
     ct_guess = mimetypes.guess_type(filename)
-
+    
     if ct_guess[0] is not None:
         ct = ct_guess[0]
     
     return ct
 
 
-# Static file handler
-
-def static_file(request, filename, root=MEDIA_ROOT):
+def static_file(filename, root=MEDIA_ROOT):
     """
-    Basic handler for serving up static media files.
-    
-    Accepts an optional root (filepath string, defaults to MEDIA_ROOT) parameter.
+    Fetches a static file from the filesystem, relative to either the given
+    MEDIA_ROOT or from the provided root directory.
     """
     if filename is None:
         raise Forbidden("You must specify a file you'd like to access.")
@@ -309,6 +305,25 @@ def static_file(request, filename, root=MEDIA_ROOT):
         raise Forbidden("You do not have permission to access this file.")
     
     return open(desired_path, 'r').read()
+
+
+# Static file handler
+
+def serve_static_file(request, filename, root=MEDIA_ROOT, force_content_type=None):
+    """
+    Basic handler for serving up static media files.
+    
+    Accepts an optional ``root`` (filepath string, defaults to ``MEDIA_ROOT``) parameter.
+    Accepts an optional ``force_content_type`` (string, guesses if ``None``) parameter.
+    """
+    file_contents = static_file(filename, root)
+    
+    if force_content_type is None:
+        ct = content_type(filename)
+    else:
+        ct = force_content_type
+    
+    return Response(file_contents, content_type=ct)
 
 
 # Decorators
