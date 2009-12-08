@@ -31,13 +31,18 @@ def test_404(request):
 
 @get('/test_500')
 def test_500(request):
-    raise RuntimeError('Oops.')
+    raise AppError('Oops.')
     return 'This should never happen either.'
+
+@get('/test_other')
+def test_other(request):
+    raise RuntimeError('Oops.')
+    return 'This should never happen either either.'
 
 @get('/test_403')
 def test_403(request):
     raise Forbidden('No soup for you!')
-    return 'This should never happen either either.'
+    return 'This should never happen either either either.'
 
 @get('/test_redirect')
 def test_redirect(request):

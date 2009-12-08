@@ -95,12 +95,20 @@ HTTP_MAPPINGS = {
 class RequestError(Exception):
     """A base exception for HTTP errors to inherit from."""
     status = 404
+    
+    def __init__(self, message, hide_traceback=False):
+        super(RequestError, self).__init__(message)
+        self.hide_traceback = hide_traceback
 
 class Forbidden(RequestError):
     status = 403
 
 class NotFound(RequestError):
     status = 404
+    
+    def __init__(self, message, hide_traceback=True):
+        super(NotFound, self).__init__(message)
+        self.hide_traceback = hide_traceback
 
 class AppError(RequestError):
     status = 500
@@ -149,13 +157,13 @@ class Request(object):
             self.POST = self.build_complex_dict()
         elif self.method == 'PUT':
             self.PUT = self.build_complex_dict()
-
-
+    
+    
     def build_get_dict(self):
         """Takes GET data and rips it apart into a dict."""
         raw_query_dict = parse_qs(self._environ['QUERY_STRING'], keep_blank_values=1)
         query_dict = {}
-    
+        
         for key, value in raw_query_dict.items():
             if len(value) <= 1:
                 query_dict[key] = value[0]
@@ -163,10 +171,10 @@ class Request(object):
                 # Since it's a list of multiple items, we must have seen more than
                 # one item of the same name come in. Store all of them.
                 query_dict[key] = value
-    
+        
         return query_dict
-
-
+    
+    
     def build_complex_dict(self):
         """Takes POST/PUT data and rips it apart into a dict."""
         raw_data = cgi.FieldStorage(fp=self._environ['wsgi.input'], environ=self._environ)
@@ -226,14 +234,15 @@ def handle_request(environ, start_response):
 
 def handle_error(exception, request):
     """If an exception is thrown, deal with it and present an error page."""
-    (e_type, e_value, e_tb) = sys.exc_info()
-    message = "%s occurred on '%s': %s\nTraceback: %s" % (
-        exception.__class__,
-        request._environ['PATH_INFO'],
-        exception,
-        ''.join(traceback.format_exception(e_type, e_value, e_tb))
-    )
-    request._environ['wsgi.errors'].write(message)
+    if not getattr(exception, 'hide_traceback', False):
+        (e_type, e_value, e_tb) = sys.exc_info()
+        message = "%s occurred on '%s': %s\nTraceback: %s" % (
+            exception.__class__,
+            request._environ['PATH_INFO'],
+            exception,
+            ''.join(traceback.format_exception(e_type, e_value, e_tb))
+        )
+        request._environ['wsgi.errors'].write(message)
     
     if isinstance(exception, RequestError):
         status = getattr(exception, 'status', 404)
