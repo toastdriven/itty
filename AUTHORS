@@ -7,6 +7,7 @@ Contributors:
 
     * Matt Croydon (mcroydon) for various patches and suggestions.
     * Christian Metts (mintchaos) for various patches and suggestions.
+    * Alex Kritikos (akrito) for the patch for the twisted server.
     * marly for a patch to an exception's message.
     * tstromberg for a patch related to printing tracebacks on errors.
     * mronge for a patch to the static files example.
