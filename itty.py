@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '2')
+__version__ = ('0', '6', '3')
 __license__ = 'BSD'
 
 
@@ -470,6 +470,13 @@ def twisted_adapter(host, port):
     reactor.run()
 
 
+def diesel_adapter(host, port):
+    # Experimental (Mostly untested).
+    from diesel.protocols.wsgi import WSGIApplication
+    app = WSGIApplication(handle_request, port=int(port))
+    app.run()
+
+
 WSGI_ADAPTERS = {
     'wsgiref': wsgiref_adapter,
     'appengine': appengine_adapter,
@@ -477,6 +484,7 @@ WSGI_ADAPTERS = {
     'flup': flup_adapter,
     'paste': paste_adapter,
     'twisted': twisted_adapter,
+    'diesel': diesel_adapter,
 }
 
 # Server
