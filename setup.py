@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-
 from distutils.core import setup
 import os
-from itty import __version__
 
 long_desc = ''
 
@@ -12,10 +10,9 @@ except:
     # The description isn't worth a failed install...
     pass
 
-classifiers = ['License :: OSI Approved :: BSD License']
 setup(
     name='itty',
-    version='%s.%s.%s' % __version__,
+    version='0.6.4',
     description='The itty-bitty Python web framework.',
     long_description=long_desc,
     author='Daniel Lindsley',
@@ -23,5 +20,7 @@ setup(
     url='http://github.com/toastdriven/itty/',
     py_modules=['itty'],
     license='BSD',
-    classifiers=classifiers,
+    classifiers=[
+        'License :: OSI Approved :: BSD License'
+    ],
 )

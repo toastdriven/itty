@@ -12,3 +12,4 @@ Contributors:
     * tstromberg for a patch related to printing tracebacks on errors.
     * mronge for a patch to the static files example.
     * Chris Wanstrath (defunkt) for static files patches & suggestions.
+    * Kevin Fricovsky (montylounge) for the Tornado adapter.

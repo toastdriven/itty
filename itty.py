@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '3')
+__version__ = ('0', '6', '4')
 __license__ = 'BSD'
 
 
@@ -477,6 +477,18 @@ def diesel_adapter(host, port):
     app.run()
 
 
+def tornado_adapter(host, port):
+    # Experimental (Mostly untested).
+    from tornado.wsgi import WSGIContainer
+    from tornado.httpserver import HTTPServer
+    from tornado.ioloop import IOLoop
+    
+    container = WSGIContainer(handle_request)
+    http_server = HTTPServer(container)
+    http_server.listen(port)
+    IOLoop.instance().start()
+
+
 WSGI_ADAPTERS = {
     'wsgiref': wsgiref_adapter,
     'appengine': appengine_adapter,
@@ -485,7 +497,9 @@ WSGI_ADAPTERS = {
     'paste': paste_adapter,
     'twisted': twisted_adapter,
     'diesel': diesel_adapter,
+    'tornado': tornado_adapter,
 }
+
 
 # Server
 
