@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '4')
+__version__ = ('0', '6', '5')
 __license__ = 'BSD'
 
 
@@ -211,9 +211,28 @@ class Response(object):
     
     def send(self, start_response):
         status = "%d %s" % (self.status, HTTP_MAPPINGS.get(self.status))
-        headers = [('Content-Type', self.content_type)] + self.headers
-        start_response(status, headers)
-        return self.output
+        headers = [('Content-Type', "%s; charset=utf-8" % self.content_type)] + self.headers
+        final_headers = []
+        
+        # Because Unicode is unsupported...
+        for header in headers:
+            final_headers.append((self.convert_to_ascii(header[0]), self.convert_to_ascii(header[1])))
+        
+        start_response(status, final_headers)
+        
+        if isinstance(self.output, unicode):
+            return self.output.encode('utf-8')
+        else:
+            return self.output
+    
+    def convert_to_ascii(self, data):
+        if isinstance(data, unicode):
+            try:
+                return data.encode('us-ascii')
+            except UnicodeError, e:
+                raise
+        else:
+            return str(data)
 
 
 def handle_request(environ, start_response):

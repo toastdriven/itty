@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from itty import *
 
 @get('/ct')
@@ -21,5 +22,9 @@ def index(request):
 @get('/test_redirect')
 def test_redirect(request):
     raise Redirect('/redirected')
+
+@get('/unicode')
+def unicode(request):
+    return u'Works with Unîcødé too!'
 
 run_itty()
