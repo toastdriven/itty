@@ -32,7 +32,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '5')
+__version__ = ('0', '6', '6')
 __license__ = 'BSD'
 
 
@@ -508,6 +508,12 @@ def tornado_adapter(host, port):
     IOLoop.instance().start()
 
 
+def gunicorn_adapter(host, port):
+    from gunicorn.arbiter import Arbiter
+    arbiter = Arbiter((host, int(port)), 4, handle_request)
+    arbiter.run()
+
+
 WSGI_ADAPTERS = {
     'wsgiref': wsgiref_adapter,
     'appengine': appengine_adapter,
@@ -517,6 +523,7 @@ WSGI_ADAPTERS = {
     'twisted': twisted_adapter,
     'diesel': diesel_adapter,
     'tornado': tornado_adapter,
+    'gunicorn': gunicorn_adapter,
 }
 
 
