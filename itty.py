@@ -239,7 +239,10 @@ def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
     try:
         request = Request(environ, start_response)
-        
+    except Exception, e:
+        return handle_error(e)
+    
+    try:
         (re_url, url, callback), kwargs = find_matching_url(request)
         response = callback(request, **kwargs)
     except Exception, e:
@@ -251,8 +254,11 @@ def handle_request(environ, start_response):
     return response.send(start_response)
 
 
-def handle_error(exception, request):
+def handle_error(exception, request=None):
     """If an exception is thrown, deal with it and present an error page."""
+    if request is None:
+        request = {'_environ': {'PATH_INFO': ''}}
+    
     if not getattr(exception, 'hide_traceback', False):
         (e_type, e_value, e_tb) = sys.exc_info()
         message = "%s occurred on '%s': %s\nTraceback: %s" % (
