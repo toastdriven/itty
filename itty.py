@@ -33,7 +33,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '6')
+__version__ = ('0', '6', '7')
 __license__ = 'BSD'
 
 
