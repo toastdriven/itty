@@ -540,7 +540,8 @@ def tornado_adapter(host, port):
 
 def gunicorn_adapter(host, port):
     from gunicorn.arbiter import Arbiter
-    arbiter = Arbiter((host, int(port)), 4, handle_request)
+    from gunicorn.config import Config
+    arbiter = Arbiter(Config({'bind': "%s:%d" % (host, int(port)), 'workers': 4}), handle_request)
     arbiter.run()
 
 
