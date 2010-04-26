@@ -24,6 +24,7 @@ import cgi
 import mimetypes
 import os
 import re
+import StringIO
 import sys
 import traceback
 try:
@@ -100,8 +101,10 @@ class RequestError(Exception):
         super(RequestError, self).__init__(message)
         self.hide_traceback = hide_traceback
 
+
 class Forbidden(RequestError):
     status = 403
+
 
 class NotFound(RequestError):
     status = 404
@@ -110,8 +113,10 @@ class NotFound(RequestError):
         super(NotFound, self).__init__(message)
         self.hide_traceback = hide_traceback
 
+
 class AppError(RequestError):
     status = 500
+
 
 class Redirect(RequestError):
     """
@@ -129,11 +134,23 @@ class Redirect(RequestError):
         self.args = ["Redirecting to '%s'..." % self.url]
 
 
+class lazyproperty(object):
+    """A property whose value is computed only once. """
+    def __init__(self, function):
+        self._function = function
+
+    def __get__(self, obj, _=None):
+        if obj is None:
+            return self
+        
+        value = self._function(obj)
+        setattr(obj, self._function.func_name, value)
+        return value
+
+
 class Request(object):
     """An object to wrap the environ bits in a friendlier way."""
     GET = {}
-    POST = {}
-    PUT = {}
     
     def __init__(self, environ, start_response):
         self._environ = environ
@@ -152,12 +169,19 @@ class Request(object):
             pass
         
         self.GET = self.build_get_dict()
-        
-        if self.method == 'POST':
-            self.POST = self.build_complex_dict()
-        elif self.method == 'PUT':
-            self.PUT = self.build_complex_dict()
     
+    @lazyproperty
+    def POST(self):
+        return self.build_complex_dict()
+    
+    @lazyproperty
+    def PUT(self):
+        return self.build_complex_dict()
+    
+    @lazyproperty
+    def body(self):
+        """Content of the request."""
+        return self._environ['wsgi.input'].read(self.content_length)
     
     def build_get_dict(self):
         """Takes GET data and rips it apart into a dict."""
@@ -177,7 +201,7 @@ class Request(object):
     
     def build_complex_dict(self):
         """Takes POST/PUT data and rips it apart into a dict."""
-        raw_data = cgi.FieldStorage(fp=self._environ['wsgi.input'], environ=self._environ)
+        raw_data = cgi.FieldStorage(fp=StringIO.StringIO(self.body), environ=self._environ)
         query_dict = {}
         
         for field in raw_data:
