@@ -33,7 +33,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '7')
+__version__ = ('0', '6', '8')
 __license__ = 'BSD'
 
 
@@ -545,6 +545,11 @@ def gunicorn_adapter(host, port):
     arbiter.run()
 
 
+def gevent_adapter(host, port):
+    from gevent import wsgi
+    wsgi.WSGIServer((host, int(port)), handle_request).serve_forever()
+
+
 WSGI_ADAPTERS = {
     'wsgiref': wsgiref_adapter,
     'appengine': appengine_adapter,
@@ -555,6 +560,7 @@ WSGI_ADAPTERS = {
     'diesel': diesel_adapter,
     'tornado': tornado_adapter,
     'gunicorn': gunicorn_adapter,
+    'gevent': gevent_adapter,
 }
 
 
