@@ -14,3 +14,4 @@ Contributors:
     * Chris Wanstrath (defunkt) for static files patches & suggestions.
     * Kevin Fricovsky (montylounge) for the Tornado adapter.
     * Matt G (binarydud) for the Gunicorn adapter.
+    * DrMegahertz for updating the Gunicorn adapter to 0.9.

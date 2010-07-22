@@ -539,10 +539,27 @@ def tornado_adapter(host, port):
 
 
 def gunicorn_adapter(host, port):
-    from gunicorn.arbiter import Arbiter
-    from gunicorn.config import Config
-    arbiter = Arbiter(Config({'bind': "%s:%d" % (host, int(port)), 'workers': 4}), handle_request)
-    arbiter.run()
+    from gunicorn import version_info
+    
+    if version_info < (0, 9, 0):
+        from gunicorn.arbiter import Arbiter
+        from gunicorn.config import Config
+        arbiter = Arbiter(Config({'bind': "%s:%d" % (host, int(port)), 'workers': 4}), handle_request)
+        arbiter.run()
+    else:
+        from gunicorn.app.base import Application
+        
+        class IttyApplication(Application):
+            def init(self, parser, opts, args):
+                return {
+                    'bind': '{0}:{1}'.format(host, port),
+                    'workers': 4
+                }
+            
+            def load(self):
+                return handle_request
+        
+        IttyApplication().run()
 
 
 def gevent_adapter(host, port):
