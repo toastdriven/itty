@@ -12,7 +12,7 @@ except:
 
 setup(
     name='itty',
-    version='0.6.8',
+    version='0.6.9',
     description='The itty-bitty Python web framework.',
     long_description=long_desc,
     author='Daniel Lindsley',

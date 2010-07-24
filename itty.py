@@ -33,7 +33,7 @@ except ImportError:
     from cgi import parse_qs
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '6', '8')
+__version__ = ('0', '6', '9')
 __license__ = 'BSD'
 
 
@@ -362,7 +362,14 @@ def static_file(filename, root=MEDIA_ROOT):
     if not os.access(desired_path, os.R_OK):
         raise Forbidden("You do not have permission to access this file.")
     
-    return open(desired_path, 'r').read()
+    ct = str(content_type(desired_path))
+    
+    # Do the text types as a non-binary read.
+    if ct.startswith('text') or ct.endswith('xml') or ct.endswith('json'):
+        return open(desired_path, 'r').read()
+    
+    # Fall back to binary for everything else.
+    return open(desired_path, 'rb').read()
 
 
 # Static file handler
