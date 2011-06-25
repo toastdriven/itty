@@ -185,7 +185,7 @@ class Request(object):
     
     def build_get_dict(self):
         """Takes GET data and rips it apart into a dict."""
-        raw_query_dict = parse_qs(self._environ['QUERY_STRING'], keep_blank_values=1)
+        raw_query_dict = parse_qs(self.query, keep_blank_values=1)
         query_dict = {}
         
         for key, value in raw_query_dict.items():
