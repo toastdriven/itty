@@ -16,3 +16,4 @@ Contributors:
     * Matt G (binarydud) for the Gunicorn adapter.
     * DrMegahertz for updating the Gunicorn adapter to 0.9.
     * thejustinwalsh for a patch related to serving binary files.
+    * apgwoz for the Eventlet adapter & a query patch.

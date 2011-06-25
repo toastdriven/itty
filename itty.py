@@ -574,6 +574,11 @@ def gevent_adapter(host, port):
     wsgi.WSGIServer((host, int(port)), handle_request).serve_forever()
 
 
+def eventlet_adapter(host, port):
+    from eventlet import wsgi, listen
+    wsgi.server(listen((host, int(port))), handle_request)
+
+
 WSGI_ADAPTERS = {
     'wsgiref': wsgiref_adapter,
     'appengine': appengine_adapter,
@@ -585,6 +590,7 @@ WSGI_ADAPTERS = {
     'tornado': tornado_adapter,
     'gunicorn': gunicorn_adapter,
     'gevent': gevent_adapter,
+    'eventlet': eventlet_adapter,
 }
 
 
