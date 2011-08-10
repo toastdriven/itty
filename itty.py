@@ -96,7 +96,7 @@ HTTP_MAPPINGS = {
 class RequestError(Exception):
     """A base exception for HTTP errors to inherit from."""
     status = 404
-    
+
     def __init__(self, message, hide_traceback=False):
         super(RequestError, self).__init__(message)
         self.hide_traceback = hide_traceback
@@ -108,7 +108,7 @@ class Forbidden(RequestError):
 
 class NotFound(RequestError):
     status = 404
-    
+
     def __init__(self, message, hide_traceback=True):
         super(NotFound, self).__init__(message)
         self.hide_traceback = hide_traceback
@@ -121,14 +121,14 @@ class AppError(RequestError):
 class Redirect(RequestError):
     """
     Redirects the user to a different URL.
-    
+
     Slightly different than the other HTTP errors, the Redirect is less
     'OMG Error Occurred' and more 'let's do something exceptional'. When you
     redirect, you break out of normal processing anyhow, so it's a very similar
     case."""
     status = 302
     url = ''
-    
+
     def __init__(self, url):
         self.url = url
         self.args = ["Redirecting to '%s'..." % self.url]
@@ -142,7 +142,7 @@ class lazyproperty(object):
     def __get__(self, obj, _=None):
         if obj is None:
             return self
-        
+
         value = self._function(obj)
         setattr(obj, self._function.func_name, value)
         return value
@@ -151,43 +151,43 @@ class lazyproperty(object):
 class Request(object):
     """An object to wrap the environ bits in a friendlier way."""
     GET = {}
-    
+
     def __init__(self, environ, start_response):
         self._environ = environ
         self._start_response = start_response
         self.setup_self()
-    
+
     def setup_self(self):
         self.path = add_slash(self._environ.get('PATH_INFO', ''))
         self.method = self._environ.get('REQUEST_METHOD', 'GET').upper()
         self.query = self._environ.get('QUERY_STRING', '')
         self.content_length = 0
-        
+
         try:
             self.content_length = int(self._environ.get('CONTENT_LENGTH', '0'))
         except ValueError:
             pass
-        
+
         self.GET = self.build_get_dict()
-    
+
     @lazyproperty
     def POST(self):
         return self.build_complex_dict()
-    
+
     @lazyproperty
     def PUT(self):
         return self.build_complex_dict()
-    
+
     @lazyproperty
     def body(self):
         """Content of the request."""
         return self._environ['wsgi.input'].read(self.content_length)
-    
+
     def build_get_dict(self):
         """Takes GET data and rips it apart into a dict."""
         raw_query_dict = parse_qs(self.query, keep_blank_values=1)
         query_dict = {}
-        
+
         for key, value in raw_query_dict.items():
             if len(value) <= 1:
                 query_dict[key] = value[0]
@@ -195,15 +195,15 @@ class Request(object):
                 # Since it's a list of multiple items, we must have seen more than
                 # one item of the same name come in. Store all of them.
                 query_dict[key] = value
-        
+
         return query_dict
-    
-    
+
+
     def build_complex_dict(self):
         """Takes POST/PUT data and rips it apart into a dict."""
         raw_data = cgi.FieldStorage(fp=StringIO.StringIO(self.body), environ=self._environ)
         query_dict = {}
-        
+
         for field in raw_data:
             if isinstance(raw_data[field], list):
                 # Since it's a list of multiple items, we must have seen more than
@@ -214,41 +214,41 @@ class Request(object):
                 query_dict[field] = raw_data[field]
             else:
                 query_dict[field] = raw_data[field].value
-        
+
         return query_dict
 
 
 class Response(object):
     headers = []
-    
+
     def __init__(self, output, headers=None, status=200, content_type='text/html'):
         self.output = output
         self.content_type = content_type
         self.status = status
         self.headers = []
-        
+
         if headers and isinstance(headers, list):
             self.headers = headers
-    
+
     def add_header(self, key, value):
         self.headers.append((key, value))
-    
+
     def send(self, start_response):
         status = "%d %s" % (self.status, HTTP_MAPPINGS.get(self.status))
         headers = [('Content-Type', "%s; charset=utf-8" % self.content_type)] + self.headers
         final_headers = []
-        
+
         # Because Unicode is unsupported...
         for header in headers:
             final_headers.append((self.convert_to_ascii(header[0]), self.convert_to_ascii(header[1])))
-        
+
         start_response(status, final_headers)
-        
+
         if isinstance(self.output, unicode):
             return self.output.encode('utf-8')
         else:
             return self.output
-    
+
     def convert_to_ascii(self, data):
         if isinstance(data, unicode):
             try:
@@ -265,16 +265,16 @@ def handle_request(environ, start_response):
         request = Request(environ, start_response)
     except Exception, e:
         return handle_error(e)
-    
+
     try:
         (re_url, url, callback), kwargs = find_matching_url(request)
         response = callback(request, **kwargs)
     except Exception, e:
         return handle_error(e, request)
-    
+
     if not isinstance(response, Response):
         response = Response(response)
-    
+
     return response.send(start_response)
 
 
@@ -282,7 +282,7 @@ def handle_error(exception, request=None):
     """If an exception is thrown, deal with it and present an error page."""
     if request is None:
         request = {'_environ': {'PATH_INFO': ''}}
-    
+
     if not getattr(exception, 'hide_traceback', False):
         (e_type, e_value, e_tb) = sys.exc_info()
         message = "%s occurred on '%s': %s\nTraceback: %s" % (
@@ -292,15 +292,15 @@ def handle_error(exception, request=None):
             ''.join(traceback.format_exception(e_type, e_value, e_tb))
         )
         request._environ['wsgi.errors'].write(message)
-    
+
     if isinstance(exception, RequestError):
         status = getattr(exception, 'status', 404)
     else:
         status = 500
-    
+
     if status in ERROR_HANDLERS:
         return ERROR_HANDLERS[status](request, exception)
-    
+
     return not_found(request, exception)
 
 
@@ -308,13 +308,13 @@ def find_matching_url(request):
     """Searches through the methods who've registed themselves with the HTTP decorators."""
     if not request.method in REQUEST_MAPPINGS:
         raise NotFound("The HTTP request method '%s' is not supported." % request.method)
-    
+
     for url_set in REQUEST_MAPPINGS[request.method]:
         match = url_set[0].search(request.path)
-        
+
         if match is not None:
             return (url_set, match.groupdict())
-    
+
     raise NotFound("Sorry, nothing here.")
 
 
@@ -328,15 +328,15 @@ def add_slash(url):
 def content_type(filename):
     """
     Takes a guess at what the desired mime type might be for the requested file.
-    
+
     Mostly only useful for static media files.
     """
     ct = 'text/plain'
     ct_guess = mimetypes.guess_type(filename)
-    
+
     if ct_guess[0] is not None:
         ct = ct_guess[0]
-    
+
     return ct
 
 
@@ -347,27 +347,27 @@ def static_file(filename, root=MEDIA_ROOT):
     """
     if filename is None:
         raise Forbidden("You must specify a file you'd like to access.")
-    
+
     # Strip the '/' from the beginning/end.
     valid_path = filename.strip('/')
-    
+
     # Kill off any character trying to work their way up the filesystem.
     valid_path = valid_path.replace('//', '/').replace('/./', '/').replace('/../', '/')
-    
+
     desired_path = os.path.join(root, valid_path)
-    
+
     if not os.path.exists(desired_path):
         raise NotFound("File does not exist.")
-    
+
     if not os.access(desired_path, os.R_OK):
         raise Forbidden("You do not have permission to access this file.")
-    
+
     ct = str(content_type(desired_path))
-    
+
     # Do the text types as a non-binary read.
     if ct.startswith('text') or ct.endswith('xml') or ct.endswith('json'):
         return open(desired_path, 'r').read()
-    
+
     # Fall back to binary for everything else.
     return open(desired_path, 'rb').read()
 
@@ -377,17 +377,17 @@ def static_file(filename, root=MEDIA_ROOT):
 def serve_static_file(request, filename, root=MEDIA_ROOT, force_content_type=None):
     """
     Basic handler for serving up static media files.
-    
+
     Accepts an optional ``root`` (filepath string, defaults to ``MEDIA_ROOT``) parameter.
     Accepts an optional ``force_content_type`` (string, guesses if ``None``) parameter.
     """
     file_contents = static_file(filename, root)
-    
+
     if force_content_type is None:
         ct = content_type(filename)
     else:
         ct = force_content_type
-    
+
     return Response(file_contents, content_type=ct)
 
 
@@ -515,11 +515,11 @@ def twisted_adapter(host, port):
     from twisted.web import server, wsgi
     from twisted.python.threadpool import ThreadPool
     from twisted.internet import reactor
-    
+
     thread_pool = ThreadPool()
     thread_pool.start()
     reactor.addSystemEventTrigger('after', 'shutdown', thread_pool.stop)
-    
+
     ittyResource = wsgi.WSGIResource(reactor, thread_pool, handle_request)
     site = server.Site(ittyResource)
     reactor.listenTCP(port, site)
@@ -538,7 +538,7 @@ def tornado_adapter(host, port):
     from tornado.wsgi import WSGIContainer
     from tornado.httpserver import HTTPServer
     from tornado.ioloop import IOLoop
-    
+
     container = WSGIContainer(handle_request)
     http_server = HTTPServer(container)
     http_server.listen(port)
@@ -547,7 +547,7 @@ def tornado_adapter(host, port):
 
 def gunicorn_adapter(host, port):
     from gunicorn import version_info
-    
+
     if version_info < (0, 9, 0):
         from gunicorn.arbiter import Arbiter
         from gunicorn.config import Config
@@ -555,23 +555,23 @@ def gunicorn_adapter(host, port):
         arbiter.run()
     else:
         from gunicorn.app.base import Application
-        
+
         class IttyApplication(Application):
             def init(self, parser, opts, args):
                 return {
                     'bind': '{0}:{1}'.format(host, port),
                     'workers': 4
                 }
-            
+
             def load(self):
                 return handle_request
-        
+
         IttyApplication().run()
 
 
 def gevent_adapter(host, port):
-    from gevent import wsgi
-    wsgi.WSGIServer((host, int(port)), handle_request).serve_forever()
+    from gevent import pywsgi
+    pywsgi.WSGIServer((host, int(port)), handle_request).serve_forever()
 
 
 def eventlet_adapter(host, port):
@@ -599,30 +599,30 @@ WSGI_ADAPTERS = {
 def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
     """
     Runs the itty web server.
-    
+
     Accepts an optional host (string), port (integer), server (string) and
     config (python module name/path as a string) parameters.
-    
+
     By default, uses Python's built-in wsgiref implementation. Specify a server
     name from WSGI_ADAPTERS to use an alternate WSGI server.
     """
     if not server in WSGI_ADAPTERS:
         raise RuntimeError("Server '%s' is not a valid server. Please choose a different server." % server)
-    
+
     if config is not None:
         # We'll let ImportErrors bubble up.
         config_options = __import__(config)
         host = getattr(config_options, 'host', host)
         port = getattr(config_options, 'port', port)
         server = getattr(config_options, 'server', server)
-    
+
     # AppEngine seems to echo everything, even though it shouldn't. Accomodate.
     if server != 'appengine':
         print 'itty starting up (using %s)...' % server
         print 'Listening on http://%s:%s...' % (host, port)
         print 'Use Ctrl-C to quit.'
         print
-    
+
     try:
         WSGI_ADAPTERS[server](host, port)
     except KeyboardInterrupt:
