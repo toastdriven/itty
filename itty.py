@@ -170,6 +170,15 @@ class Request(object):
 
         self.GET = self.build_get_dict()
 
+    def __getattr__(self, name):
+        """
+        Allow accesses of the environment if we don't already have an attribute
+        for. This lets you do things like::
+
+            script_name = request.SCRIPT_NAME
+        """
+        return self._environ[name]
+
     @lazyproperty
     def POST(self):
         return self.build_complex_dict()
@@ -197,7 +206,6 @@ class Request(object):
                 query_dict[key] = value
 
         return query_dict
-
 
     def build_complex_dict(self):
         """Takes POST/PUT data and rips it apart into a dict."""
