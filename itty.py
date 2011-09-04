@@ -404,60 +404,50 @@ def serve_static_file(request, filename, root=MEDIA_ROOT, force_content_type=Non
 def get(url):
     """Registers a method as capable of processing GET requests."""
     def wrapped(method):
-        def new(*args, **kwargs):
-            return method(*args, **kwargs)
         # Register.
         re_url = re.compile("^%s$" % add_slash(url))
-        REQUEST_MAPPINGS['GET'].append((re_url, url, new))
-        return new
+        REQUEST_MAPPINGS['GET'].append((re_url, url, method))
+        return method
     return wrapped
 
 
 def post(url):
     """Registers a method as capable of processing POST requests."""
     def wrapped(method):
-        def new(*args, **kwargs):
-            return method(*args, **kwargs)
         # Register.
         re_url = re.compile("^%s$" % add_slash(url))
-        REQUEST_MAPPINGS['POST'].append((re_url, url, new))
-        return new
+        REQUEST_MAPPINGS['POST'].append((re_url, url, method))
+        return method
     return wrapped
 
 
 def put(url):
     """Registers a method as capable of processing PUT requests."""
     def wrapped(method):
-        def new(*args, **kwargs):
-            return method(*args, **kwargs)
         # Register.
         re_url = re.compile("^%s$" % add_slash(url))
-        REQUEST_MAPPINGS['PUT'].append((re_url, url, new))
+        REQUEST_MAPPINGS['PUT'].append((re_url, url, method))
         new.status = 201
-        return new
+        return method
     return wrapped
 
 
 def delete(url):
     """Registers a method as capable of processing DELETE requests."""
     def wrapped(method):
-        def new(*args, **kwargs):
-            return method(*args, **kwargs)
         # Register.
         re_url = re.compile("^%s$" % add_slash(url))
-        REQUEST_MAPPINGS['DELETE'].append((re_url, url, new))
-        return new
+        REQUEST_MAPPINGS['DELETE'].append((re_url, url, method))
+        return method
     return wrapped
 
 
 def error(code):
     """Registers a method for processing errors of a certain HTTP code."""
     def wrapped(method):
-        def new(*args, **kwargs):
-            return method(*args, **kwargs)
         # Register.
-        ERROR_HANDLERS[code] = new
-        return new
+        ERROR_HANDLERS[code] = method
+        return method
     return wrapped
 
 
