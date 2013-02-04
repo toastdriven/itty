@@ -491,10 +491,6 @@ class Response(object):
             for cookie in self._new_cookie.values():
                 headers.append(("Set-Cookie", utf8(cookie.OutputString(None))))
 
-        # Because Unicode is unsupported...
-        #for header in headers:
-            #final_headers.add((self.convert_to_ascii(header[0]), self.convert_to_ascii(header[1])))
-
         start_response(status, headers)
 
         if isinstance(self.output, unicode):
