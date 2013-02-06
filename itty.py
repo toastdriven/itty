@@ -20,8 +20,12 @@ Example Usage::
 Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
 at night. The joking around has become reality. :)
 """
+import base64
 import cgi
 import datetime
+import hashlib
+import hmac
+import logging
 import mimetypes
 import numbers
 import os
@@ -154,6 +158,21 @@ class lazyproperty(object):
         setattr(obj, self._function.func_name, value)
         return value
 
+if hasattr(hmac, 'compare_digest'):  # python 3.3
+    _time_independent_equals = hmac.compare_digest
+else:
+    def _time_independent_equals(a, b):
+        if len(a) != len(b):
+            return False
+        result = 0
+        if isinstance(a[0], int):  # python3 byte strings
+            for x, y in zip(a, b):
+                result |= x ^ y
+        else:  # python2
+            for x, y in zip(a, b):
+                result |= ord(x) ^ ord(y)
+        return result == 0
+
 if type('') is not type(b''):
     def u(s):
         return s
@@ -209,6 +228,52 @@ def format_timestamp(ts):
     else:
         raise TypeError("unknown timestamp type: %r" % ts)
     return time.strftime("%a, %d %b %Y %H:%M:%S GMT", ts)
+
+
+def create_signed_value(secret, name, value):
+    timestamp = utf8(str(int(time.time())))
+    value = base64.b64encode(utf8(value))
+    signature = _create_signature(secret, name, value, timestamp)
+    value = b"|".join([value, timestamp, signature])
+    return value
+
+
+def decode_signed_value(secret, name, value, max_age_days=31):
+    if not value:
+        return None
+    parts = utf8(value).split(b"|")
+    if len(parts) != 3:
+        return None
+    signature = _create_signature(secret, name, parts[0], parts[1])
+    if not _time_independent_equals(parts[2], signature):
+        logging.warning("Invalid cookie signature %r", value)
+        return None
+    timestamp = int(parts[1])
+    if timestamp < time.time() - max_age_days * 86400:
+        logging.warning("Expired cookie %r", value)
+        return None
+    if timestamp > time.time() + 31 * 86400:
+        # _cookie_signature does not hash a delimiter between the
+        # parts of the cookie, so an attacker could transfer trailing
+        # digits from the payload to the timestamp without altering the
+        # signature.  For backwards compatibility, sanity-check timestamp
+        # here instead of modifying _cookie_signature.
+        logging.warning("Cookie timestamp in future; possible tampering %r", value)
+        return None
+    if parts[1].startswith(b"0"):
+        logging.warning("Tampered cookie %r", value)
+        return None
+    try:
+        return base64.b64decode(parts[0])
+    except Exception:
+        return None
+
+
+def _create_signature(secret, *parts):
+    hash = hmac.new(utf8(secret), digestmod=hashlib.sha1)
+    for part in parts:
+        hash.update(utf8(part))
+    return utf8(hash.hexdigest())
 
 
 class HTTPHeaders(dict):
@@ -388,9 +453,17 @@ class Request(object):
 
     def get_cookie(self, name, default=None):
         """Gets the value of the cookie with the given name, else default."""
-        if self._cookies is not None and name in self._cookies:
-            return self._cookies[name].value
+        if self.cookies is not None and name in self.cookies:
+            return self.cookies[name].value
         return default
+
+    def get_secure_cookie(self, name, value=None, max_age_days=31):
+        """Returns the given signed cookie if it validates, or None.
+        """
+        if value is None:
+            value = self.get_cookie(name)
+        return decode_signed_value(COOKIE_SECRET, name, value,
+                                   max_age_days=max_age_days)
 
     def build_get_dict(self):
         """Takes GET data and rips it apart into a dict."""
@@ -481,6 +554,16 @@ class Response(object):
         """Deletes all the cookies the user sent with this request."""
         for name in self.request.cookies:
             self.clear_cookie(name)
+
+    def set_secure_cookie(self, name, value, expires_days=30, **kwargs):
+        """Signs and timestamps a cookie so it cannot be forged."""
+        self.set_cookie(name, self.create_signed_value(name, value),
+                        expires_days=expires_days, **kwargs)
+
+    def create_signed_value(self, name, value):
+        """Signs and timestamps a string so it cannot be forged.
+        """
+        return create_signed_value(COOKIE_SECRET, name, value)
 
     def send(self, start_response):
         status = "%d %s" % (self.status, HTTP_MAPPINGS.get(self.status))
@@ -833,9 +916,13 @@ WSGI_ADAPTERS = {
 }
 
 
+COOKIE_SECRET = None
+
 # Server
 
-def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
+
+def run_itty(server='wsgiref', host='localhost', port=8080, config=None,
+    cookie_secret=None):
     """
     Runs the itty web server.
 
@@ -861,6 +948,9 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None):
         print 'Listening on http://%s:%s...' % (host, port)
         print 'Use Ctrl-C to quit.'
         print
+
+    global COOKIE_SECRET
+    COOKIE_SECRET = cookie_secret or base64.b64encode(os.urandom(32))
 
     try:
         WSGI_ADAPTERS[server](host, port)
