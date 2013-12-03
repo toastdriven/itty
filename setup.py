@@ -1,6 +1,10 @@
 #!/usr/bin/env python
-from distutils.core import setup
 import os
+
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 long_desc = ''
 
