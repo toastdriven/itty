@@ -44,7 +44,7 @@ except ImportError:
     import http.cookies as Cookie
 
 __author__ = 'Daniel Lindsley'
-__version__ = ('0', '8', '1')
+__version__ = ('0', '8', '2')
 __license__ = 'BSD'
 
 
