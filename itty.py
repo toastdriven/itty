@@ -20,6 +20,8 @@ Example Usage::
 Thanks go out to Matt Croydon & Christian Metts for putting me up to this late
 at night. The joking around has become reality. :)
 """
+from __future__ import print_function
+
 import base64
 import cgi
 import datetime
@@ -30,22 +32,35 @@ import mimetypes
 import numbers
 import os
 import re
-import StringIO
 import sys
 import time
 import traceback
+
 try:
     from urlparse import parse_qs
 except ImportError:
     from cgi import parse_qs
+
 try:
     import Cookie
 except ImportError:
     import http.cookies as Cookie
 
+
+# Python 3
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+
 __author__ = 'Daniel Lindsley'
 __version__ = ('0', '8', '2')
 __license__ = 'BSD'
+
+
+# Python 3 support
+IS_PY3 = sys.version_info[0] == 3
 
 
 REQUEST_MAPPINGS = {
@@ -231,7 +246,7 @@ def format_timestamp(ts):
 
 
 def create_signed_value(secret, name, value):
-    timestamp = utf8(str(int(time.time())))
+    timestamp = utf8(native_str(int(time.time())))
     value = base64.b64encode(utf8(value))
     signature = _create_signature(secret, name, value, timestamp)
     value = b"|".join([value, timestamp, signature])
@@ -482,7 +497,7 @@ class Request(object):
 
     def build_complex_dict(self):
         """Takes POST/PUT data and rips it apart into a dict."""
-        raw_data = cgi.FieldStorage(fp=StringIO.StringIO(self.body), environ=self._environ)
+        raw_data = cgi.FieldStorage(fp=StringIO(self.body), environ=self._environ)
         query_dict = {}
 
         for field in raw_data:
@@ -568,7 +583,7 @@ class Response(object):
     def send(self, start_response):
         status = "%d %s" % (self.status, HTTP_MAPPINGS.get(self.status))
         headers = ([('Content-Type', "%s; charset=utf-8" % self.content_type)] +
-                  [(k, v) for k, v in self.headers.iteritems()])
+                  [(k, v) for k, v in self.headers.items()])
 
         if hasattr(self, "_new_cookie"):
             for cookie in self._new_cookie.values():
@@ -576,32 +591,32 @@ class Response(object):
 
         start_response(status, headers)
 
-        if isinstance(self.output, unicode):
+        if isinstance(self.output, unicode_type):
             return self.output.encode('utf-8')
         else:
             return self.output
 
     def convert_to_ascii(self, data):
-        if isinstance(data, unicode):
+        if isinstance(data, unicode_type):
             try:
                 return data.encode('us-ascii')
-            except UnicodeError, e:
+            except UnicodeError as e:
                 raise
         else:
-            return str(data)
+            return native_str(data)
 
 
 def handle_request(environ, start_response):
     """The main handler. Dispatches to the user's code."""
     try:
         request = Request(environ, start_response)
-    except Exception, e:
+    except Exception as e:
         return handle_error(e)
 
     try:
         (re_url, url, callback), kwargs = find_matching_url(request)
         response = callback(request, **kwargs)
-    except Exception, e:
+    except Exception as e:
         return handle_error(e, request)
 
     if not isinstance(response, Response):
@@ -694,7 +709,7 @@ def static_file(filename, root=MEDIA_ROOT):
     if not os.access(desired_path, os.R_OK):
         raise Forbidden("You do not have permission to access this file.")
 
-    ct = str(content_type(desired_path))
+    ct = native_str(content_type(desired_path))
 
     # Do the text types as a non-binary read.
     if ct.startswith('text') or ct.endswith('xml') or ct.endswith('json'):
@@ -751,7 +766,6 @@ def put(url):
         # Register.
         re_url = re.compile("^%s$" % add_slash(url))
         REQUEST_MAPPINGS['PUT'].append((re_url, url, method))
-        new.status = 201
         return method
     return wrapped
 
@@ -830,7 +844,7 @@ def flup_adapter(host, port):
 def paste_adapter(host, port):
     # Experimental (Untested).
     from paste import httpserver
-    httpserver.serve(handle_request, host=host, port=str(port))
+    httpserver.serve(handle_request, host=host, port=native_str(port))
 
 
 def twisted_adapter(host, port):
@@ -944,10 +958,10 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None,
 
     # AppEngine seems to echo everything, even though it shouldn't. Accomodate.
     if server != 'appengine':
-        print 'itty starting up (using %s)...' % server
-        print 'Listening on http://%s:%s...' % (host, port)
-        print 'Use Ctrl-C to quit.'
-        print
+        print('itty starting up (using %s)...' % server)
+        print('Listening on http://%s:%s...' % (host, port))
+        print('Use Ctrl-C to quit.')
+        print()
 
     global COOKIE_SECRET
     COOKIE_SECRET = cookie_secret or base64.b64encode(os.urandom(32))
@@ -955,4 +969,4 @@ def run_itty(server='wsgiref', host='localhost', port=8080, config=None,
     try:
         WSGI_ADAPTERS[server](host, port)
     except KeyboardInterrupt:
-        print 'Shutting down. Have a nice day!'
+        print('Shutting down. Have a nice day!')
